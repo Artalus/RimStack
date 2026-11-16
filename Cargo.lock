@@ -5242,7 +5242,7 @@ dependencies = [
 
 [[package]]
 name = "rimstack-app"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "apple-native-keyring-store",
  "chrono",
@@ -5269,7 +5269,7 @@ dependencies = [
 
 [[package]]
 name = "rimstack-core"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "chrono",
  "dunce",
