@@ -318,3 +318,20 @@ fn each_change_a_view_tests_for_is_among_what_it_reads() {
     }
     assert!(checked >= 11, "only {checked} views declare what they read");
 }
+
+#[test]
+fn every_build_of_the_platform_draws_text_on_macos() {
+    let manifest =
+        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml")).unwrap();
+    let platforms: Vec<&str> = manifest
+        .lines()
+        .filter(|line| line.starts_with("gpui_platform"))
+        .collect();
+    assert_eq!(platforms.len(), 2, "{platforms:?}");
+    for line in platforms {
+        assert!(
+            line.contains("\"font-kit\""),
+            "macOS draws no text with {line}"
+        );
+    }
+}
