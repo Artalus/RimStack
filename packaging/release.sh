@@ -84,7 +84,9 @@ line_for() {
         echo "- $system: built from $from"
     else
         from=$(grep -oE "^- $system: built from [0-9a-f]+" <<< "$before" | grep -oE '[0-9a-f]+$' || true)
-        echo "- $system: ${from:+built from $from, }not rebuilt from $short (its build failed)"
+        local why="its build failed"
+        if [ -n "${ONLY:-}" ] && [ "$system" != "$ONLY" ]; then why="only $ONLY was built"; fi
+        echo "- $system: ${from:+built from $from, }not rebuilt from $short ($why)"
     fi
 }
 changes=$(packaging/changes.sh "$commit" "$tag")
