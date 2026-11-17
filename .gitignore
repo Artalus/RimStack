@@ -6,3 +6,4 @@ docs/
 .claude/
 .idea/
 prototypes/
+.cargo/config.toml
