@@ -72,12 +72,25 @@ pub fn forget_hint(cx: &mut App) {
 
 /// `control` with its tip; an empty one shows none.
 pub fn tipped(control: Stateful<gpui::Div>, text: SharedString) -> Stateful<gpui::Div> {
+    match text.is_empty() {
+        true => control,
+        false => tipped_hovering(control, text, |_, _, _| {}),
+    }
+}
+
+/// `tipped`, with `hovered` told too as the pointer comes and goes: an element takes one `on_hover`.
+pub fn tipped_hovering(
+    control: Stateful<gpui::Div>,
+    text: SharedString,
+    hovered: impl Fn(&bool, &mut Window, &mut App) + 'static,
+) -> Stateful<gpui::Div> {
     if text.is_empty() {
-        return control;
+        return control.on_hover(hovered);
     }
     let pointed = text.clone();
     control
-        .on_hover(move |over, _, cx| {
+        .on_hover(move |over, window, cx| {
+            hovered(over, window, cx);
             if *over {
                 point_at(pointed.clone(), cx);
             } else if hint(cx) == pointed {

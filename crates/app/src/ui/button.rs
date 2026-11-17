@@ -1,6 +1,6 @@
 use super::focus;
 use super::theme::{self, Theme};
-use super::tip::tipped;
+use super::tip::{tipped, tipped_hovering};
 use super::widgets::{TextSized, halo, icon, watched, weighted, with_alpha};
 use gpui::{
     App as Cx, Bounds, ClickEvent, ElementId, FontWeight, Hsla, InteractiveElement, IntoElement,
@@ -206,7 +206,7 @@ impl RenderOnce for Btn {
             .rounded(theme::CORNER)
             .bg(with_alpha(ground, frame))
             .when(self.enabled, |d| {
-                d.on_hover(keep_pointed).child(super::motion::layer(
+                d.child(super::motion::layer(
                     div()
                         .absolute()
                         .inset_0()
@@ -260,11 +260,14 @@ impl RenderOnce for Btn {
                     .inset_0(),
             )
         });
-        let control = match self.enabled {
-            true => focus::reachable(control, &handle, theme::CORNER, false, window, theme),
-            false => control,
-        };
-        tipped(control, tip)
+        match self.enabled {
+            true => tipped_hovering(
+                focus::reachable(control, &handle, theme::CORNER, false, window, theme),
+                tip,
+                keep_pointed,
+            ),
+            false => tipped(control, tip),
+        }
     }
 }
 
@@ -355,10 +358,11 @@ impl RenderOnce for Chip {
             .on_click
             .as_ref()
             .map(|_| focus::handle(id.clone(), window, cx));
-        let pointed = self
+        let (pointed, keep_pointed) = self
             .on_click
             .as_ref()
-            .map(|_| super::motion::hovered(&id, window, cx));
+            .map(|_| super::motion::hovered(&id, window, cx))
+            .unzip();
         let theme = cx.global::<Theme>();
         let tone = self.tone.unwrap_or(theme.colours.ink2);
         let ink = if self.on_accent {
@@ -402,17 +406,15 @@ impl RenderOnce for Chip {
                     turn,
                 ))
             })
-            .when_some(pointed, |d, (pointed, keep_pointed)| {
-                d.cursor_pointer()
-                    .on_hover(keep_pointed)
-                    .child(super::motion::layer(
-                        div()
-                            .absolute()
-                            .inset_0()
-                            .rounded(height / 2.)
-                            .bg(super::motion::over(ground, hovered)),
-                        pointed,
-                    ))
+            .when_some(pointed, |d, pointed| {
+                d.cursor_pointer().child(super::motion::layer(
+                    div()
+                        .absolute()
+                        .inset_0()
+                        .rounded(height / 2.)
+                        .bg(super::motion::over(ground, hovered)),
+                    pointed,
+                ))
             })
             .when(self.held, |d| d.border_2().border_color(tone))
             .when_some(self.max_width, |d, most| d.max_w(most))
@@ -453,6 +455,9 @@ impl RenderOnce for Chip {
             }
             None => control,
         };
-        tipped(control, self.tip)
+        match keep_pointed {
+            Some(keep_pointed) => tipped_hovering(control, self.tip, keep_pointed),
+            None => tipped(control, self.tip),
+        }
     }
 }
