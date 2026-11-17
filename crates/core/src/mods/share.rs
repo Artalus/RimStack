@@ -164,7 +164,7 @@ mod tests {
 1. Harmony {packageid: Brrainz.Harmony}
 Tools PackageId: Author.Tools and more
 {packageid: a.b} {PACKAGEID:c.d}
-PackageId: 
+PackageId:
 ";
         assert_eq!(
             ids_in(page),

@@ -538,8 +538,8 @@ Runtime:   .NET 10.0.10-waylithclr.dev
 [SizedApparel]: RimJobWorld Found
 Error in static constructor of DynamicAnimationOffsets.ModInit: System.TypeInitializationException: Invalid path
 [Ref A0F2FD20]
-  at System.IO.Path.GetDirectoryName (System.String path) [0x0000d] in <e3b>:0 
-  at DynamicAnimationOffsets.OffsetPaths.Initialise () [0x00001] in D:\\Mods\\Source\\OffsetPaths.cs:80 
+  at System.IO.Path.GetDirectoryName (System.String path) [0x0000d] in <e3b>:0
+  at DynamicAnimationOffsets.OffsetPaths.Initialise () [0x00001] in D:\\Mods\\Source\\OffsetPaths.cs:80
 DynamicAnimationOffsets.ModInit..cctor()
    --- End of inner exception stack trace ---
 [BetterTrees] Finished applying tree overrides.

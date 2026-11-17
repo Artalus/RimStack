@@ -102,6 +102,7 @@ mod tests {
     use super::*;
     use gpui::{IntoElement, ParentElement, Render, Styled, Window, div};
     use std::path::PathBuf;
+    #[cfg(target_os = "linux")]
     use std::sync::Arc;
 
     struct Shows {
