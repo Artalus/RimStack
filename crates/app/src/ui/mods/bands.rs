@@ -61,6 +61,7 @@ impl Mods {
         let previewing = list.order.previewing();
         let dirty = list.standing.dirty && list.order.is_installed();
         let unsaved = list.standing.unsaved.clone();
+        let around = crate::ui::around::read(cx);
         let band = |tone| {
             div()
                 .flex_none()
@@ -68,58 +69,68 @@ impl Mods {
                 .pb(theme::GAP)
                 .child(notice(tone))
         };
+        let changed = |tone, said: String, buttons: Vec<AnyElement>| {
+            band(tone)
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(theme::GAP)
+                        .h(theme.sized(34.))
+                        .pl(theme::GAP_LARGE)
+                        .pr(theme::GAP_TINY)
+                        .child(div().flex_none().size(px(7.)).rounded(px(3.5)).bg(tone))
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .overflow_hidden()
+                                .whitespace_nowrap()
+                                .text_ellipsis()
+                                .sized_text(theme, theme.body())
+                                .text_color(c.ink)
+                                .child(said),
+                        )
+                        .children(buttons),
+                )
+                .into_any_element()
+        };
+        if around.list_changed && !previewing {
+            let update = Btn::new("update-list-band", put(&say!("Update")))
+                .icon("save")
+                .tone(c.warn)
+                .tip(put(&say!(
+                    "Saves the current load order as {}, replacing what it held",
+                    around.list_name.clone()
+                )))
+                .on_click(|_, window, cx| window.dispatch_action(Box::new(super::Save), cx));
+            shown.push(changed(
+                c.warn,
+                put(&say!("List not updated: {}", around.list_name.clone())),
+                vec![update.into_any_element()],
+            ));
+        }
         if dirty && !previewing {
-            shown.push(
-                band(c.warn)
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(theme::GAP)
-                            .h(theme.sized(34.))
-                            .pl(theme::GAP_LARGE)
-                            .pr(theme::GAP_TINY)
-                            .child(div().flex_none().size(px(7.)).rounded(px(3.5)).bg(c.warn))
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .min_w_0()
-                                    .overflow_hidden()
-                                    .whitespace_nowrap()
-                                    .text_ellipsis()
-                                    .sized_text(theme, theme.body())
-                                    .text_color(c.ink)
-                                    .child(put(&say!("Not saved: {}", unsaved))),
-                            )
-                            .child(
-                                Btn::new("show-changed", put(&say!("Show")))
-                                    .tip(put(&say!(
-                                        "Only the mods moved or activated since the last save"
-                                    )))
-                                    .on_click(
-                                        cx.listener(|m, _, _, cx| m.toggle_term("is:changed", cx)),
-                                    ),
-                            )
-                            .child(
-                                Btn::new("discard-changes", put(&say!("Discard")))
-                                    .tip(put(&say!(
-                                        "Back to the saved list. Undo brings the changes back."
-                                    )))
-                                    .on_click(cx.listener(|m, _, _, cx| m.discard_changes(cx))),
-                            )
-                            .child(
-                                Btn::new("save-band", put(&say!("Save")))
-                                    .primary()
-                                    .on_click(cx.listener(|m, _, _, cx| m.save(None, cx))),
-                            ),
-                    )
-                    .into_any_element(),
-            );
+            let show = Btn::new("show-changed", put(&say!("Show")))
+                .tip(put(&say!(
+                    "Only the mods moved or activated since the last Deploy"
+                )))
+                .on_click(cx.listener(|m, _, _, cx| m.toggle_term("is:changed", cx)));
+            let discard = Btn::new("discard-changes", put(&say!("Discard")))
+                .tip(put(&say!(
+                    "Back to the deployed load order. Undo brings the changes back."
+                )))
+                .on_click(cx.listener(|m, _, _, cx| m.discard_changes(cx)));
+            shown.push(changed(
+                c.accent,
+                put(&say!("Not deployed: {}", unsaved)),
+                vec![show.into_any_element(), discard.into_any_element()],
+            ));
         }
         let problem = match self.status.save_problem.is_empty() {
             true => self.status.upkeep_problem.clone(),
             false => put(&say!(
-                "The list was not saved. {}",
+                "The load order was not deployed. {}",
                 self.status.save_problem.clone()
             )),
         };
@@ -153,7 +164,7 @@ impl Mods {
                     .child(
                         Btn::new("keep-mine", put(&say!("Keep mine")))
                             .tip(put(&say!(
-                                "Keeps the list here; the next Save overwrites ModsConfig.xml"
+                                "Keeps the list here; the next Deploy overwrites ModsConfig.xml"
                             )))
                             .on_click(cx.listener(|m, _, _, cx| m.keep_file(false, cx))),
                     )

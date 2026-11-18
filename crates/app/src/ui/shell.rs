@@ -250,7 +250,10 @@ impl Render for Shell {
         }
         let around = super::around::around(cx).read(cx);
         let in_the_way = (around.in_the_way.len(), around.errors);
-        let (list_name, dirty) = (around.list_name.clone(), around.dirty);
+        let (list_name, list_changed) = (
+            around.list_name.clone(),
+            around.list_changed && !around.lists_open,
+        );
         let theme = cx.global::<Theme>();
         let (win, ink, family, body) = (
             theme.colours.win,
@@ -313,6 +316,9 @@ impl Render for Shell {
             .on_action(cx.listener(|shell, _: &super::keys::Section8, _, cx| {
                 shell.go(Section::Settings, cx)
             }))
+            .on_action(cx.listener(|shell, _: &super::mods::Save, _, cx| {
+                shell.lists.update(cx, |lists, cx| lists.update_in_use(cx))
+            }))
             .on_action(
                 cx.listener(|shell, _: &super::find::FocusSearch, window, cx| {
                     shell.go(Section::Find, cx);
@@ -346,7 +352,7 @@ impl Render for Shell {
                     demo: self.demo,
                     in_the_way,
                     list_name,
-                    dirty,
+                    list_changed,
                     behind: super::counts::read(cx).behind,
                     running: self.game.read(cx).running(),
                     lists_view: self.lists.clone(),

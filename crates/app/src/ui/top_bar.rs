@@ -67,9 +67,10 @@ pub struct TopState {
     pub section: super::section::Section,
     pub demo: bool,
     pub in_the_way: (usize, bool),
-    /// The kept list the load order came from, empty when none, and whether it changed since.
+    /// The kept list the load order came from, empty when none, and whether it changed since:
+    /// shown by a dot, on the list's row while the Lists popup is open.
     pub list_name: String,
-    pub dirty: bool,
+    pub list_changed: bool,
     pub behind: usize,
     pub running: bool,
     pub lists_view: gpui::Entity<super::lists::Lists>,
@@ -82,7 +83,7 @@ pub fn top_bar(state: TopState, window: &Window, cx: &mut Context<Shell>) -> imp
         demo,
         in_the_way,
         list_name,
-        dirty,
+        list_changed,
         behind,
         running,
         lists_view,
@@ -432,7 +433,7 @@ pub fn top_bar(state: TopState, window: &Window, cx: &mut Context<Shell>) -> imp
                                         })
                                     }),
                             )
-                            .when(dirty, |d| {
+                            .when(list_changed, |d| {
                                 let dot = div()
                                     .id("unsaved-dot")
                                     .absolute()

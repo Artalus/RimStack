@@ -1,10 +1,11 @@
 //! What the window around the sections shows of them: what stands in Play's way, the list's name
-//! and whether it is saved, and the work under way. Filled from the sections each time one of
+//! and whether the load order has changes it was not updated with, and the work under way. Filled from the sections each time one of
 //! them changes, never while drawn; the bars read it while drawn, so they are drawn again only
 //! when what they show changed.
 
 use super::mods::ListState;
 use gpui::{App as Cx, AppContext, Entity, Global};
+use std::rc::Rc;
 
 #[derive(Default, Clone, PartialEq, Debug)]
 pub struct Around {
@@ -17,6 +18,12 @@ pub struct Around {
     /// The kept list the load order came from, empty when none: read at the start, then told
     /// by `Lists` as it keeps it.
     pub list_name: String,
+    /// The mods of the kept list `list_name` names, as `Lists` last read them.
+    pub kept: Option<Rc<Vec<String>>>,
+    /// The load order has changes the kept list it came from was not updated with.
+    pub list_changed: bool,
+    /// The Lists popup is open: the dot then sits on the list's row instead.
+    pub lists_open: bool,
     pub mods_work: Vec<String>,
     pub downloads_work: Vec<String>,
     pub community_busy: bool,
@@ -71,4 +78,23 @@ pub fn from_list(list: &Entity<ListState>, cx: &mut Cx) {
         around.unsaved = unsaved;
         around.mods_work = work;
     });
+    judge_list(cx);
+}
+
+/// `kept`: the mods of the list the load order goes by, `None` when it goes by none.
+pub fn kept(kept: Option<Vec<String>>, cx: &mut Cx) {
+    change(cx, |around| around.kept = kept.map(Rc::new));
+    judge_list(cx);
+}
+
+fn judge_list(cx: &mut Cx) {
+    let kept = around(cx).read(cx).kept.clone();
+    let fold = rimstack_core::rimworld::id::fold;
+    let changed = kept.is_some_and(|kept| {
+        super::app(cx).session_if_read().is_some_and(|session| {
+            let now = session.current();
+            now.len() != kept.len() || now.iter().zip(kept.iter()).any(|(a, b)| fold(a) != fold(b))
+        })
+    });
+    change(cx, |around| around.list_changed = changed);
 }

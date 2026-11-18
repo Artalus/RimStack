@@ -85,7 +85,7 @@ fn groups() -> Vec<(Sentence, Vec<(Sentence, Sentence)>)> {
         (
             say!("Load order"),
             vec![
-                (say!("Ctrl + S"), say!("Save")),
+                (say!("Ctrl + S"), say!("Update the list in use")),
                 (say!("Ctrl + Z"), say!("Undo")),
                 (say!("Ctrl + Shift + Z"), say!("Redo")),
                 (say!("Ctrl + F"), say!("Filter the load order")),

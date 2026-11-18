@@ -189,7 +189,7 @@ impl Logs {
                 .when(!since.same, |d| {
                     d.child(
                         Btn::new("use-clean-list", put(&say!("Use")))
-                            .tip(put(&say!("Uses the load order of the last clean launch as the list on the Mods screen. Save writes it.")))
+                            .tip(put(&say!("Uses the load order of the last clean launch as the list on the Mods screen. Deploy writes it.")))
                             .on_click(cx.listener(move |_, _, _, cx| crate::ui::navigate::go(crate::ui::navigate::Go::UseList(ids.clone()), cx))),
                     )
                 })

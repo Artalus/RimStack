@@ -338,7 +338,7 @@ impl Settings {
         let backup = report.backup.is_some();
         rows.push(Row::Line(
             Line::new(4, "original-list", put(&say!("List from before RimStack")))
-                .tip(put(&say!("The load order the game had before RimStack first saved, kept in ModsConfig.xml.rimstack-original. Using it changes the list here; Save writes it.")))
+                .tip(put(&say!("The load order the game had before RimStack first saved, kept in ModsConfig.xml.rimstack-original. Using it changes the list here; Deploy writes it.")))
                 .held(Btn::new("use-original", put(&say!("Use"))).enabled(backup).on_click(cx.listener(|_, _, _, cx| {
                     if let Some(ids) = crate::ui::app(cx).original_list() {
                         crate::ui::navigate::go(crate::ui::navigate::Go::UseList(ids), cx);

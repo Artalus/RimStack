@@ -390,7 +390,7 @@ impl Logs {
                                 .pt(theme::GAP)
                                 .child(
                                     Btn::new("use-its-list", put(&say!("Use its list")))
-                                        .tip(put(&say!("Uses this launch's load order as the list on the Mods screen. Save writes it.")))
+                                        .tip(put(&say!("Uses this launch's load order as the list on the Mods screen. Deploy writes it.")))
                                         .enabled(changed)
                                         .on_click(cx.listener(move |_, _, _, cx| crate::ui::navigate::go(crate::ui::navigate::Go::UseList(ids.clone()), cx))),
                                 )

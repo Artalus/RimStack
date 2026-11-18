@@ -156,7 +156,7 @@ impl Shell {
                     Btn::new("sort-first", put(&say!("Sort first")))
                         .icon("arrow-up-down")
                         .fill()
-                        .tip(put(&say!("Shows the order the rules ask for, to keep or discard. Nothing is written before Save.")))
+                        .tip(put(&say!("Shows the order the rules ask for, to keep or discard. Nothing is written before Deploy.")))
                         .on_click(cx.listener(|shell, _, _, cx| {
                             shell.before_play = false;
                             shell.go(crate::ui::section::Section::Mods, cx);

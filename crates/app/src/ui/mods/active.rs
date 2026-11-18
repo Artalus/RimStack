@@ -91,7 +91,7 @@ impl Mods {
             (true, 0) => put(&say!("Sort")),
             (true, n) => put(&say_n!(n, "Sort · {} move", "Sort · {} moves")),
         };
-        let save = put(&say!("Save"));
+        let save = put(&say!("Deploy"));
         let full = |text: &str| {
             measure(window, theme, text, theme.small(), theme.medium)
                 + theme.icon()
@@ -272,7 +272,7 @@ impl Mods {
                         .spoken(sort.clone())
                         .icon("arrow-up-down")
                         .tone(c.moved)
-                        .tip(put(&say!("Shows the order the rules ask for, to keep or discard. Nothing is written before Save.")))
+                        .tip(put(&say!("Shows the order the rules ask for, to keep or discard. Nothing is written before Deploy.")))
                         .enabled(!previewing && files_read)
                         .on_click(cx.listener(|m, _, _, cx| m.preview_sort(cx))),
                     &self.hints.anchors,
@@ -281,8 +281,8 @@ impl Mods {
                 .child(super::hints::anchored_at(
                     Btn::new("save", shown_text(&save))
                         .spoken(save.clone())
-                        .icon("save")
-                        .tip(put(&say!("Writes the load order to ModsConfig.xml (Ctrl + S). The file as it was is copied beside it first.")))
+                        .icon("arrow-down-to-line")
+                        .tip(put(&say!("Writes the load order to the game's ModsConfig.xml. The file as it was is copied beside it first.")))
                         .enabled(dirty)
                         .primary_if(dirty)
                         .on_click(cx.listener(|m, _, _, cx| m.save(None, cx))),
