@@ -227,13 +227,20 @@ impl Shell {
             dirty,
             say!("Deploy"),
             &order,
-            say!("Ctrl + S"),
+            none.clone(),
             Rc::new(|shell, _, cx| {
                 shell
                     .sections
                     .mods
                     .update(cx, |mods, cx| mods.save(None, cx))
             }),
+        );
+        push(
+            super::around::read(cx).list_changed,
+            say!("Update the list in use"),
+            &order,
+            say!("Ctrl + S"),
+            Rc::new(|shell, _, cx| shell.lists.update(cx, |lists, cx| lists.update_in_use(cx))),
         );
         push(
             can_undo,

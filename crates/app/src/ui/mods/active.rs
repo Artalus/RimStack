@@ -282,7 +282,7 @@ impl Mods {
                     Btn::new("save", shown_text(&save))
                         .spoken(save.clone())
                         .icon("arrow-down-to-line")
-                        .tip(put(&say!("Writes the load order to ModsConfig.xml (Ctrl + S). The file as it was is copied beside it first.")))
+                        .tip(put(&say!("Writes the load order to the game's ModsConfig.xml. The file as it was is copied beside it first.")))
                         .enabled(dirty)
                         .primary_if(dirty)
                         .on_click(cx.listener(|m, _, _, cx| m.save(None, cx))),

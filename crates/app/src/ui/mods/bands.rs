@@ -61,6 +61,7 @@ impl Mods {
         let previewing = list.order.previewing();
         let dirty = list.standing.dirty && list.order.is_installed();
         let unsaved = list.standing.unsaved.clone();
+        let around = crate::ui::around::read(cx);
         let band = |tone| {
             div()
                 .flex_none()
@@ -94,6 +95,21 @@ impl Mods {
                 )
                 .into_any_element()
         };
+        if around.list_changed && !previewing {
+            let update = Btn::new("update-list-band", put(&say!("Update")))
+                .icon("save")
+                .tone(c.warn)
+                .tip(put(&say!(
+                    "Saves the current load order as {}, replacing what it held",
+                    around.list_name.clone()
+                )))
+                .on_click(|_, window, cx| window.dispatch_action(Box::new(super::Save), cx));
+            shown.push(changed(
+                c.warn,
+                put(&say!("List not updated: {}", around.list_name.clone())),
+                vec![update.into_any_element()],
+            ));
+        }
         if dirty && !previewing {
             let show = Btn::new("show-changed", put(&say!("Show")))
                 .tip(put(&say!(

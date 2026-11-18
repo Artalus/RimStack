@@ -165,6 +165,15 @@ impl Lists {
         cx.notify();
     }
 
+    /// Ctrl + S: the list the load order goes by is updated with it, as its Update does.
+    pub fn update_in_use(&mut self, cx: &mut Context<Self>) {
+        let around = super::around::around(cx).read(cx);
+        if around.list_changed {
+            let name = around.list_name.clone();
+            self.keep(&name, false, cx);
+        }
+    }
+
     fn use_ids(
         &mut self,
         ids: Vec<String>,

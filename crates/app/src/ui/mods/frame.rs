@@ -1,4 +1,4 @@
-use super::{FocusFilter, Mods, Redo, Save, Undo, pane_widths};
+use super::{FocusFilter, Mods, Redo, Undo, pane_widths};
 use crate::ui::theme::{self, Theme};
 use gpui::{
     Context, Focusable, InteractiveElement, IntoElement, ParentElement, Render, Styled, Window,
@@ -72,11 +72,6 @@ impl Render for Mods {
             }))
             .on_action(cx.listener(|mods, _: &Undo, _, cx| mods.undo(cx)))
             .on_action(cx.listener(|mods, _: &Redo, _, cx| mods.redo(cx)))
-            .on_action(cx.listener(|mods, _: &Save, _, cx| {
-                if mods.list.read(cx).standing.dirty {
-                    mods.save(None, cx);
-                }
-            }))
             .when_some(self.comparing.clone(), |d, view| {
                 d.child(
                     div()

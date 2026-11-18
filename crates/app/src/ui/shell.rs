@@ -316,6 +316,9 @@ impl Render for Shell {
             .on_action(cx.listener(|shell, _: &super::keys::Section8, _, cx| {
                 shell.go(Section::Settings, cx)
             }))
+            .on_action(cx.listener(|shell, _: &super::mods::Save, _, cx| {
+                shell.lists.update(cx, |lists, cx| lists.update_in_use(cx))
+            }))
             .on_action(
                 cx.listener(|shell, _: &super::find::FocusSearch, window, cx| {
                     shell.go(Section::Find, cx);
