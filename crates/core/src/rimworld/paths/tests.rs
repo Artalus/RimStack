@@ -22,7 +22,8 @@ fn steam_root(home: &Path, libraries: &[(&Path, bool)]) -> PathBuf {
         let apps = if *has_game { "\"294100\" \"1\"" } else { "" };
         vdf += &format!(
             "\"{i}\" {{ \"path\" \"{}\" \"apps\" {{ {apps} }} }}\n",
-            path.display()
+            // Steam writes a Windows path's backslashes doubled.
+            path.display().to_string().replace('\\', "\\\\")
         );
     }
     fs::write(root.join("steamapps/libraryfolders.vdf"), vdf + "}\n").unwrap();
@@ -36,8 +37,8 @@ fn native_install_is_found() {
     library_with_game(&root);
     fs::create_dir_all(home.path().join(NATIVE_CONFIG)).unwrap();
 
-    let paths = detect(home.path(), &Overrides::default());
-    let root = root.canonicalize().unwrap();
+    let paths = on_linux(home.path(), &Overrides::default());
+    let root = dunce::canonicalize(&root).unwrap();
     assert_eq!(paths.game, Some(root.join("steamapps/common/RimWorld")));
     assert_eq!(
         paths.workshop,
@@ -88,8 +89,8 @@ fn library_listing_the_app_beats_a_stale_copy() {
     library_with_game(&real);
     steam_root(home.path(), &[(&stale, false), (&real, true)]);
 
-    let paths = detect(home.path(), &Overrides::default());
-    let real = real.canonicalize().unwrap();
+    let paths = on_linux(home.path(), &Overrides::default());
+    let real = dunce::canonicalize(&real).unwrap();
     assert_eq!(paths.game, Some(real.join("steamapps/common/RimWorld")));
 }
 
@@ -107,8 +108,8 @@ fn proton_settings_are_found() {
     fs::create_dir_all(&prefix).unwrap();
     fs::create_dir_all(home.path().join(NATIVE_CONFIG)).unwrap();
 
-    let paths = detect(home.path(), &Overrides::default());
-    assert_eq!(paths.config, Some(prefix.canonicalize().unwrap()));
+    let paths = on_linux(home.path(), &Overrides::default());
+    assert_eq!(paths.config, Some(dunce::canonicalize(&prefix).unwrap()));
 }
 
 #[test]
@@ -199,8 +200,10 @@ fn a_program_s_own_folders_follow_the_system() {
         app_dirs(Os::Linux, home, &none),
         (home.join(".config"), home.join(".local/share"))
     );
-    let set = |name: &str| (name == "XDG_DATA_HOME").then(|| PathBuf::from("/data"));
-    assert_eq!(app_dirs(Os::Linux, home, &set).1, PathBuf::from("/data"));
+    // Absolute on the system the test runs on, as a set folder must be.
+    let data = std::env::temp_dir().join("data");
+    let set = |name: &str| (name == "XDG_DATA_HOME").then(|| data.clone());
+    assert_eq!(app_dirs(Os::Linux, home, &set).1, data);
     assert_eq!(
         app_dirs(Os::Windows, home, &none),
         (home.join("AppData/Roaming"), home.join("AppData/Local"))
@@ -219,7 +222,7 @@ fn a_copy_from_another_shop_is_found_by_its_core_and_has_no_workshop() {
     fs::create_dir_all(home.path().join("GOG Games/Another Game/Data")).unwrap();
     fs::write(game.join("Version.txt"), "1.6.4871 rev600").unwrap();
     let paths = detect_on(Os::Linux, home.path(), &|_| None, &Overrides::default());
-    assert_eq!(paths.game, Some(game.canonicalize().unwrap()));
+    assert_eq!(paths.game, Some(dunce::canonicalize(&game).unwrap()));
     assert_eq!(
         (paths.workshop, paths.game_version.as_deref()),
         (None, Some("1.6"))
@@ -229,7 +232,7 @@ fn a_copy_from_another_shop_is_found_by_its_core_and_has_no_workshop() {
     let bundle = mac.path().join("Applications/RimWorld.app");
     fs::create_dir_all(bundle.join("Data/Core")).unwrap();
     let paths = detect_on(Os::Mac, mac.path(), &|_| None, &Overrides::default());
-    assert_eq!(paths.game, Some(bundle.canonicalize().unwrap()));
+    assert_eq!(paths.game, Some(dunce::canonicalize(&bundle).unwrap()));
 }
 
 #[test]
@@ -241,15 +244,15 @@ fn steam_s_list_of_libraries_is_read_from_either_place_it_keeps_it() {
     fs::create_dir_all(root.join("config")).unwrap();
     let (usual, other) = ("steamapps/libraryfolders.vdf", "config/libraryfolders.vdf");
     fs::rename(root.join(usual), root.join(other)).unwrap();
-    let paths = detect(home.path(), &Overrides::default());
-    let second = second.canonicalize().unwrap();
+    let paths = on_linux(home.path(), &Overrides::default());
+    let second = dunce::canonicalize(&second).unwrap();
     assert_eq!(paths.game, Some(second.join("steamapps/common/RimWorld")));
 }
 
 #[test]
 fn nothing_installed_finds_nothing() {
     let home = tempfile::tempdir().unwrap();
-    let paths = detect(home.path(), &Overrides::default());
+    let paths = on_linux(home.path(), &Overrides::default());
     assert_eq!(paths, Paths::default());
     assert!(paths.roots().is_empty());
     assert_eq!(paths.mods_config(), None);
