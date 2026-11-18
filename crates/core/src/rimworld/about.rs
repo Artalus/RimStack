@@ -332,7 +332,12 @@ Second line.</description>
         assert_eq!(locate(dir.path()), None);
         std::fs::create_dir(dir.path().join("about")).unwrap();
         std::fs::write(dir.path().join("about/ABOUT.XML"), "").unwrap();
-        assert_eq!(locate(dir.path()), Some(dir.path().join("about/ABOUT.XML")));
+        // A folder that ignores case (Windows, macOS) may find it by the name asked first.
+        let on_disk = |path: PathBuf| dunce::canonicalize(path).unwrap();
+        assert_eq!(
+            locate(dir.path()).map(on_disk),
+            Some(on_disk(dir.path().join("about/ABOUT.XML")))
+        );
     }
 
     #[test]

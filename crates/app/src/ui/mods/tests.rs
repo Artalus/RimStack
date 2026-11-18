@@ -159,14 +159,15 @@ fn a_wheel_notch_glides_three_lines_down(cx: &mut gpui::TestAppContext) {
     cx.simulate_event(notch);
     let list = mods.read_with(cx, |mods, _| mods.list(Side::Active).clone());
     let scrolled = list.read_with(cx, |list, _| list.scroll().clone());
+    let line = cx.update(|_, cx| cx.global::<crate::ui::theme::Theme>().sized(40.));
+    // The frame drawn after the event may already have glided a few milliseconds' worth.
     assert!(
-        scrolled.borrow().top() < gpui::px(1.),
+        scrolled.borrow().top() < line * 3.,
         "a notch lands over time, not at once"
     );
     std::thread::sleep(std::time::Duration::from_millis(250));
     list.update(cx, |_, cx| cx.notify());
     cx.run_until_parked();
-    let line = cx.update(|_, cx| cx.global::<crate::ui::theme::Theme>().sized(40.));
     assert_eq!(scrolled.borrow().top(), line * 3.);
 }
 

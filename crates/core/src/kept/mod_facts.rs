@@ -75,7 +75,6 @@ impl<T: for<'a> Deserialize<'a>> ModFacts<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::{Duration, SystemTime};
 
     fn stamp_of(dir: &Path) -> FolderStamp {
         FolderStamp::of(dir, |_| false)
@@ -91,9 +90,7 @@ mod tests {
         kept.write(&file).unwrap();
         let read = ModFacts::<Vec<String>>::read(&file, "1.6");
         assert_eq!(*read.get(&folder, stamp_of(&folder)).unwrap(), ["Gold"]);
-        let later = SystemTime::now() + Duration::from_secs(500);
-        let defs = std::fs::File::open(folder.join("Defs")).unwrap();
-        defs.set_modified(later).unwrap();
+        crate::base::stamp::touch_dir(&folder.join("Defs"), 500);
         assert!(read.get(&folder, stamp_of(&folder)).is_none());
     }
 

@@ -448,7 +448,7 @@ mod tests {
     #[test]
     fn a_local_checkout_is_listed_by_its_mod_with_what_its_remote_said_last() {
         let (tmp, app) = installed();
-        let roads = tmp.path().join("game/Mods/roads");
+        let roads = tmp.path().join("game").join("Mods").join("roads");
         std::fs::create_dir(roads.join(".git")).unwrap();
         app.rescan();
         let loaded = app.library();

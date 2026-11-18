@@ -35,16 +35,21 @@ impl FolderStamp {
     }
 }
 
+/// Marks `dir` changed `later` seconds from now.
+#[cfg(test)]
+pub(crate) fn touch_dir(dir: &Path, later: u64) {
+    let mut open = std::fs::OpenOptions::new();
+    open.read(true);
+    // Windows opens a folder only with backup semantics, and dates it only with write access.
+    #[cfg(windows)]
+    std::os::windows::fs::OpenOptionsExt::custom_flags(open.write(true), 0x0200_0000);
+    let at = std::time::SystemTime::now() + std::time::Duration::from_secs(later);
+    open.open(dir).unwrap().set_modified(at).unwrap();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::{Duration, SystemTime};
-
-    pub fn touch_dir(dir: &Path, later: u64) {
-        let file = std::fs::File::open(dir).unwrap();
-        file.set_modified(SystemTime::now() + Duration::from_secs(later))
-            .unwrap();
-    }
 
     #[test]
     fn a_change_in_a_subfolder_changes_the_stamp_and_a_skipped_one_does_not() {

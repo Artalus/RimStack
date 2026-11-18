@@ -551,7 +551,10 @@ mod tests {
         );
         assert_eq!(
             found[0].why.to_string(),
-            "Assemblies/Other.dll uses its code"
+            format!(
+                "{} uses its code",
+                Path::new("Assemblies").join("Other.dll").display()
+            )
         );
     }
 

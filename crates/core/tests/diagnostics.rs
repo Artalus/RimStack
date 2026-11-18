@@ -31,6 +31,8 @@ fn notes_problems_and_a_panic_on_another_thread_are_all_in_the_file() {
         "{kept}"
     );
     assert!(lines[3].contains("Z crash index out of bounds"), "{kept}");
-    assert!(lines[3].contains("tests/diagnostics.rs:"), "{kept}");
+    // The place is written with the system's own separator.
+    let place = format!("tests{}diagnostics.rs:", std::path::MAIN_SEPARATOR);
+    assert!(lines[3].contains(&place), "{kept}");
     assert!(lines.len() > 5 && lines[4].starts_with("    "), "{kept}");
 }

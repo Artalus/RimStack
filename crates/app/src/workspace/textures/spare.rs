@@ -148,7 +148,13 @@ mod tests {
         let hats = &found.mods[0];
         assert_eq!(
             (hats.name.as_str(), hats.files[0].shown.as_str()),
-            ("Hats", "Textures/hat.dds")
+            (
+                "Hats",
+                std::path::Path::new("Textures")
+                    .join("hat.dds")
+                    .to_string_lossy()
+                    .as_ref()
+            )
         );
         assert_eq!(found.bytes(), dds.len() as u64);
 

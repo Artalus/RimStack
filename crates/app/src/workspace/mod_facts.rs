@@ -251,7 +251,12 @@ mod tests {
     }
 
     fn later(dir: &std::path::Path) {
-        let file = std::fs::File::open(dir).unwrap();
+        let mut open = std::fs::OpenOptions::new();
+        open.read(true);
+        // Windows opens a folder only with backup semantics, and dates it only with write access.
+        #[cfg(windows)]
+        std::os::windows::fs::OpenOptionsExt::custom_flags(open.write(true), 0x0200_0000);
+        let file = open.open(dir).unwrap();
         let at = SystemTime::now() + Duration::from_secs(900);
         file.set_modified(at).unwrap();
     }
