@@ -80,12 +80,24 @@ impl Lists {
     /// Every kept list's file is read and parsed: off the window's thread.
     fn read(&mut self, cx: &mut Context<Self>) {
         let app = super::app(cx);
+        let name = self.list_name(cx);
         self.reading.run(
             "lists",
             cx,
-            move |_| (app.saved_lists(), app.recent_snapshots(), app.history()),
-            |lists, (saved, snapshots, history), cx| {
+            move |_| {
+                let kept = (!name.is_empty())
+                    .then(|| app.list_named(&name).ok())
+                    .flatten();
+                (
+                    app.saved_lists(),
+                    app.recent_snapshots(),
+                    app.history(),
+                    kept,
+                )
+            },
+            |lists, (saved, snapshots, history, kept), cx| {
                 (lists.saved, lists.snapshots, lists.history) = (saved, snapshots, history);
+                super::around::kept(kept, cx);
                 cx.notify();
             },
         );
@@ -108,6 +120,7 @@ impl Lists {
         self.turn = super::motion::opening();
         self.before = window.focused(cx);
         window.focus(&self.focus, cx);
+        super::around::change(cx, |around| around.lists_open = which == Which::Lists);
         cx.notify();
     }
 
@@ -122,6 +135,7 @@ impl Lists {
 
     fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let closed = self.open.take();
+        super::around::change(cx, |around| around.lists_open = false);
         if super::motion::fades_out(cx) {
             self.fading = closed;
             let turn = self.turn;
@@ -142,11 +156,12 @@ impl Lists {
     }
 
     /// The load order now goes by `name`; "" when it has none.
-    fn go_by(&self, name: &str, cx: &mut Context<Self>) {
+    fn go_by(&mut self, name: &str, cx: &mut Context<Self>) {
         match super::app(cx).keep_pref("Mods", "listName", name) {
             Ok(()) => super::around::change(cx, |around| around.list_name = name.to_string()),
             Err(problem) => notices::say(crate::words::said_of(&problem), notices::Tone::Err, cx),
         }
+        self.read(cx);
         cx.notify();
     }
 
@@ -174,15 +189,8 @@ impl Lists {
 
     /// The list the load order goes by, when the load order has changed since it was kept.
     fn unkept(&self, cx: &gpui::App) -> Option<String> {
-        let name = self.list_name(cx);
-        let app = super::app(cx);
-        let kept = app.list_named(&name).ok()?;
-        let session = app.session_if_read()?;
-        let now = session.current();
-        let fold = rimstack_core::rimworld::id::fold;
-        let same =
-            now.len() == kept.len() && now.iter().zip(&kept).all(|(a, b)| fold(a) == fold(b));
-        (!same).then_some(name)
+        let around = super::around::around(cx).read(cx);
+        around.list_changed.then(|| around.list_name.clone())
     }
 
     /// `then` runs once the question is answered.
@@ -362,6 +370,7 @@ impl Lists {
     ) -> Vec<AnyElement> {
         let c = &theme.colours;
         let current = self.list_name(cx);
+        let changed = super::around::around(cx).read(cx).list_changed;
         let row = |d: gpui::Div| {
             d.flex()
                 .items_center()
@@ -409,6 +418,7 @@ impl Lists {
                 name.clone()
             ));
             let deleting = vec![put(&say!("This cannot be undone."))];
+            let unkept = changed && current == name;
             let update = Btn::new(
                 ("update-list", at),
                 if current == name {
@@ -418,6 +428,7 @@ impl Lists {
                 },
             )
             .icon("save")
+            .when(unkept, |b| b.tone(c.warn))
             .tip(replaces.clone())
             .on_click(cx.listener(move |lists, _, window, cx| {
                 let kept = kept.clone();
@@ -444,6 +455,18 @@ impl Lists {
                             .text_color(c.ink)
                             .child(name.clone()),
                     )
+                    .when(unkept, |d| {
+                        let dot = div()
+                            .id(("unkept-dot", at))
+                            .flex_none()
+                            .size(px(8.))
+                            .rounded(px(4.))
+                            .bg(c.warn);
+                        d.child(super::tip::tipped(
+                            dot,
+                            put(&say!("The list has changes that are not saved")).into(),
+                        ))
+                    })
                     .child(label(
                         theme,
                         theme.small(),

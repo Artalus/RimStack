@@ -250,7 +250,10 @@ impl Render for Shell {
         }
         let around = super::around::around(cx).read(cx);
         let in_the_way = (around.in_the_way.len(), around.errors);
-        let (list_name, dirty) = (around.list_name.clone(), around.dirty);
+        let (list_name, list_changed) = (
+            around.list_name.clone(),
+            around.list_changed && !around.lists_open,
+        );
         let theme = cx.global::<Theme>();
         let (win, ink, family, body) = (
             theme.colours.win,
@@ -346,7 +349,7 @@ impl Render for Shell {
                     demo: self.demo,
                     in_the_way,
                     list_name,
-                    dirty,
+                    list_changed,
                     behind: super::counts::read(cx).behind,
                     running: self.game.read(cx).running(),
                     lists_view: self.lists.clone(),
