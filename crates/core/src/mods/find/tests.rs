@@ -70,7 +70,7 @@ fn names(found: &[FileHits<String>], tmp: &Path) -> Vec<String> {
                 .strip_prefix(tmp)
                 .unwrap()
                 .to_string_lossy()
-                .into_owned()
+                .replace('\\', "/")
         })
         .collect()
 }

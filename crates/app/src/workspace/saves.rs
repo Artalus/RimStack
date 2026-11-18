@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn a_save_is_compared_with_the_load_order_and_said_in_words() {
         let (tmp, app) = installed();
-        let saves = tmp.path().join("config/Saves");
+        let saves = tmp.path().join("config").join("Saves");
         std::fs::create_dir_all(&saves).unwrap();
         std::fs::write(saves.join("Colony.rws"), SAVE).unwrap();
         let report = app.saves_report();

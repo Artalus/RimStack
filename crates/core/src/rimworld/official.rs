@@ -78,7 +78,10 @@ mod tests {
         assert_eq!(names, ["Core", "Anomaly", "Royalty"]);
         assert_eq!(found[2].author, "Ludeon Studios");
         let picture = game.join("Data/Royalty/About/Preview.png");
-        assert_eq!(found[2].picture.as_deref(), picture.to_str());
+        assert_eq!(
+            found[2].picture.as_deref().map(Path::new),
+            Some(picture.as_path())
+        );
         assert_eq!(found[0].picture, None);
         assert_eq!(found[2].package_id, "ludeon.rimworld.royalty");
     }
