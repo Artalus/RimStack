@@ -44,9 +44,15 @@ pub(crate) fn partial_beside(real: &Path) -> PathBuf {
     partial.into()
 }
 
-/// A link is followed: renaming onto the link itself would replace it.
+/// A link is followed: renaming onto the link itself would replace it. Only a link is
+/// resolved: on Windows a plain file resolved while another writer replaces it can be
+/// named by where its old copy went (`$Extend\$Deleted\…`), and the write then fails.
 pub(crate) fn through_links(path: &Path) -> PathBuf {
-    dunce::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+    let linked = std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink());
+    match linked {
+        true => dunce::canonicalize(path).unwrap_or_else(|_| path.to_path_buf()),
+        false => path.to_path_buf(),
+    }
 }
 
 /// The sync before the rename is needed: without it a power cut can leave an empty file.
