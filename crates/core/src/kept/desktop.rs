@@ -60,7 +60,8 @@ pub fn install(data_home: &Path, exe: &Path, entry: &str, icon: &[u8]) -> std::i
     Ok(stale)
 }
 
-#[cfg(test)]
+// The desktop entry is written on Linux only (`put_among_applications`).
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
 
