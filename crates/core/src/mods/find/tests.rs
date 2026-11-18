@@ -1,10 +1,10 @@
 use super::*;
 use crate::base::pattern::{Pattern, Switches};
+use crate::base::stamp::touch_dir;
 use std::fs;
 use std::path::Path;
 use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
-use std::time::{Duration, SystemTime};
 
 fn write(root: &Path, file: &str, text: &str) {
     let path = root.join(file);
@@ -250,12 +250,6 @@ fn progress_counts_targets_done_of_total() {
         },
     );
     assert_eq!(last.into_inner().unwrap().total, 2);
-}
-
-fn touch_dir(dir: &Path, later: u64) {
-    let file = fs::File::open(dir).unwrap();
-    file.set_modified(SystemTime::now() + Duration::from_secs(later))
-        .unwrap();
 }
 
 #[test]
