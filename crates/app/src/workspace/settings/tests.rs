@@ -131,7 +131,7 @@ fn with_no_language_chosen_the_system_s_first_one_offered_is_used() {
     let (_tmp, app) = installed();
     let app = app.speaking(vec!["ja-JP".into(), "fr-CA".into(), "en-US".into()]);
     assert_eq!(app.language_in_use(), "Français");
-    assert_eq!(app.speak()["Save"], "Enregistrer");
+    assert_eq!(app.speak()["Deploy"], "Déployer");
     assert_eq!(app.settings_report().language, None);
 
     let file = app.start_language("Nihongo").unwrap();
