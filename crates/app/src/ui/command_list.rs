@@ -225,7 +225,7 @@ impl Shell {
         );
         push(
             dirty,
-            say!("Save"),
+            say!("Deploy"),
             &order,
             say!("Ctrl + S"),
             Rc::new(|shell, _, cx| {

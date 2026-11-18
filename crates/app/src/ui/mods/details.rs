@@ -234,13 +234,13 @@ impl DetailsView {
             );
         }
         if dirty {
-            let said = put(&say!("Not saved: {}", self.shown.unsaved.clone()));
+            let said = put(&say!("Not deployed: {}", self.shown.unsaved.clone()));
             body.push(line(
                 theme,
                 "save-list",
                 said,
                 Some((
-                    put(&say!("Save")),
+                    put(&say!("Deploy")),
                     true,
                     self.on_mods(|mods, cx| mods.save(None, cx)),
                 )),
@@ -250,7 +250,7 @@ impl DetailsView {
             body.push(line(
                 theme,
                 "saved",
-                put(&say!("No problems, and the list is saved.")),
+                put(&say!("No problems, and the load order is deployed.")),
                 None,
             ));
         }

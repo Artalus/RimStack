@@ -214,7 +214,7 @@ fn each_hint_fits() {
         "Done",
         "The arrows beside it go from one mod with a problem to the next. Its details say what is wrong and offer the fix.",
         "Sort shows the order the mods' rules ask for and what would move. Apply moves the mods; Discard leaves the list as it was.",
-        "Nothing reaches the game before Save. Until then every change can be undone or discarded.",
+        "Nothing reaches the game before Deploy. Until then every change can be undone or discarded.",
     ];
     let steps: [Act; 3] = [
         |mods, cx| mods.show_hint(1, cx),

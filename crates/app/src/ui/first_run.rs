@@ -192,7 +192,7 @@ impl Render for FirstRun {
             say!("Fetched from GitHub on Start, and again only on request"),
             say!("What Sort follows besides each mod's own rules"),
             say!("Changeable in Settings at any time"),
-            say!("Nothing is written to the game before Save"),
+            say!("Nothing is written to the game before Deploy"),
         ];
         let last = self.step == STEPS - 1;
         let buttons =

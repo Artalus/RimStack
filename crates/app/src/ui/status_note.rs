@@ -54,7 +54,7 @@ impl Render for StatusNote {
                     &theme,
                     theme.small(),
                     c.warn,
-                    put(&say!("Not saved: {}", unsaved)),
+                    put(&say!("Not deployed: {}", unsaved)),
                 ))
             })
             .when_some(pointed, |d, said| {

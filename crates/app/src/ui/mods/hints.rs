@@ -130,7 +130,7 @@ impl Mods {
                 "Sort shows the order the mods' rules ask for and what would move. Apply moves the mods; Discard leaves the list as it was."
             ),
             _ => say!(
-                "Nothing reaches the game before Save. Until then every change can be undone or discarded."
+                "Nothing reaches the game before Deploy. Until then every change can be undone or discarded."
             ),
         });
         let corner = match at_right {

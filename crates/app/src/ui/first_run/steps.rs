@@ -354,7 +354,7 @@ impl FirstRun {
                         ),
                         found(
                             put(&say!(
-                                "Save writes ModsConfig.xml and copies the file as it was first"
+                                "Deploy writes ModsConfig.xml and copies the file as it was first"
                             )),
                             None,
                             true,

@@ -586,7 +586,7 @@ impl Lists {
                 .child(
                     Btn::new("use-copied", put(&say!("Use the copied list")))
                         .enabled(!self.busy)
-                        .tip(put(&say!("A list of mods copied as text or as links, or a link to a Rentry.co page, becomes the load order. Save writes it.")))
+                        .tip(put(&say!("A list of mods copied as text or as links, or a link to a Rentry.co page, becomes the load order. Deploy writes it.")))
                         .on_click(cx.listener(|lists, _, _, cx| lists.use_copied(cx))),
                 )
                 .child(
@@ -636,7 +636,7 @@ impl Lists {
                             })
                             .spoken(put(&say!("Restore the list from before: {}", said)))
                             .tip(match restores {
-                                true => put(&say!("The load order as it was just before. Nothing is written before Save.")),
+                                true => put(&say!("The load order as it was just before. Nothing is written before Deploy.")),
                                 false => put(&say!("Renames the files back inside the mod")),
                             })
                             .on_click(cx.listener(move |lists, _, window, cx| lists.revert(&held, window, cx))),

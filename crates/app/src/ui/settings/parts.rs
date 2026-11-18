@@ -131,7 +131,7 @@ impl Settings {
         };
         rows.push(Row::Line(
             Line::new(0, "copies", put(&say!("Copies")))
-                .tip(put(&say!("Before each Save, the old file is copied next to it as .rimstack-backup, and the first time also as .rimstack-original.")))
+                .tip(put(&say!("Before each Deploy, the old file is copied next to it as .rimstack-backup, and the first time also as .rimstack-original.")))
                 .held(words(theme, if report.backup.is_some() { c.ink } else { c.ink3 }, copies)),
         ));
 

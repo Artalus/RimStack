@@ -143,7 +143,7 @@ impl ListState {
         }
         if dirty {
             said.push(put(&say!(
-                "The list has unsaved changes; the game would start with the saved one"
+                "The load order is not deployed; the game would start with the last deployed one"
             )));
         }
         said
