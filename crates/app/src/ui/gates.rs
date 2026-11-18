@@ -67,7 +67,10 @@ fn no_view_sizes_a_thing_in_fixed_pixels() {
     views(&root, &mut files);
     let mut found = Vec::new();
     for file in files {
-        let text = std::fs::read_to_string(&file).unwrap();
+        // A Windows checkout may keep CRLF line ends, which the split below would miss.
+        let text = std::fs::read_to_string(&file)
+            .unwrap()
+            .replace("\r\n", "\n");
         let shown = text
             .split("#[cfg(test)]\nmod tests {")
             .next()
