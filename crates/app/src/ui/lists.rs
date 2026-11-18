@@ -172,6 +172,44 @@ impl Lists {
         }
     }
 
+    /// The list the load order goes by, when the load order has changed since it was kept.
+    fn unkept(&self, cx: &gpui::App) -> Option<String> {
+        let name = self.list_name(cx);
+        let app = super::app(cx);
+        let kept = app.list_named(&name).ok()?;
+        let session = app.session_if_read()?;
+        let now = session.current();
+        let fold = rimstack_core::rimworld::id::fold;
+        let same =
+            now.len() == kept.len() && now.iter().zip(&kept).all(|(a, b)| fold(a) == fold(b));
+        (!same).then_some(name)
+    }
+
+    /// `then` runs once the question is answered.
+    #[allow(clippy::too_many_arguments)]
+    fn ask_then(
+        &self,
+        title: String,
+        lines: Vec<String>,
+        label: String,
+        danger: bool,
+        then: impl FnOnce(&mut Self, &mut Window, &mut Context<Self>) + 'static,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let me = cx.entity().downgrade();
+        let question = Question {
+            title,
+            lines: lines.into_iter().map(Line::Text).collect(),
+            label,
+            danger,
+            run: Box::new(move |window, cx| {
+                let _ = me.update(cx, |lists, cx| then(lists, window, cx));
+            }),
+        };
+        prompt::ask(question, window, cx);
+    }
+
     /// Kept off the window's thread; `typed`: the name field is emptied once it is.
     fn keep(&mut self, name: &str, typed: bool, cx: &mut Context<Self>) {
         let (app, name) = (super::app(cx), name.trim().to_string());
@@ -366,6 +404,11 @@ impl Lists {
         for (at, saved) in self.saved.iter().enumerate() {
             let name = saved.name.clone();
             let (kept, used, deleted) = (name.clone(), name.clone(), name.clone());
+            let replaces = put(&say!(
+                "Saves the current load order as {}, replacing what it held",
+                name.clone()
+            ));
+            let deleting = vec![put(&say!("This cannot be undone."))];
             let update = Btn::new(
                 ("update-list", at),
                 if current == name {
@@ -375,12 +418,18 @@ impl Lists {
                 },
             )
             .icon("save")
-            .tip(put(&say!(
-                "Saves the current load order as {}, replacing what it held",
-                name.clone()
-            )))
-            .on_click(cx.listener(move |lists, _, _, cx| {
-                lists.keep(&kept, false, cx);
+            .tip(replaces.clone())
+            .on_click(cx.listener(move |lists, _, window, cx| {
+                let kept = kept.clone();
+                if lists.list_name(cx) == kept {
+                    return lists.keep(&kept, false, cx);
+                }
+                let title = put(&say!("Replace {}?", kept));
+                let then = move |lists: &mut Self, _: &mut Window, cx: &mut Context<Self>| {
+                    lists.keep(&kept, false, cx)
+                };
+                let label = put(&say!("Replace"));
+                lists.ask_then(title, vec![replaces.clone()], label, true, then, window, cx);
             }));
             shown.push(
                 row(div())
@@ -402,14 +451,39 @@ impl Lists {
                         put(&say_n!(saved.mods, "{} mod", "{} mods")),
                     ))
                     .child(update)
-                    .child(Btn::new(("use-list", at), put(&say!("Use"))).on_click(
-                        cx.listener(move |lists, _, window, cx| lists.use_list(&used, window, cx)),
-                    ))
+                    .child(
+                        Btn::new(("use-list", at), put(&say!("Use"))).on_click(cx.listener(
+                            move |lists, _, window, cx| {
+                                let used = used.clone();
+                                let Some(unkept) = lists.unkept(cx) else {
+                                    return lists.use_list(&used, window, cx);
+                                };
+                                let title = put(&say!("Use {}?", used));
+                                let note = say!(
+                                    "The load order has changes {} was not updated with. Undo brings them back.",
+                                    unkept
+                                );
+                                let then = move |lists: &mut Self, window: &mut Window, cx: &mut Context<Self>| {
+                                    lists.use_list(&used, window, cx)
+                                };
+                                let label = put(&say!("Use"));
+                                lists.ask_then(title, vec![put(&note)], label, false, then, window, cx);
+                            },
+                        )),
+                    )
                     .child(
                         Btn::new(("delete-list", at), "")
                             .icon("trash-2")
                             .tip(put(&say!("Delete {}", name)))
-                            .on_click(move |_, _, cx| super::app(cx).delete_list(&deleted)),
+                            .on_click(cx.listener(move |lists, _, window, cx| {
+                                let deleted = deleted.clone();
+                                let title = put(&say!("Delete {}?", deleted));
+                                let then = move |_: &mut Self, _: &mut Window, cx: &mut Context<Self>| {
+                                    super::app(cx).delete_list(&deleted)
+                                };
+                                let label = put(&say!("Delete"));
+                                lists.ask_then(title, deleting.clone(), label, true, then, window, cx);
+                            })),
                     )
                     .into_any_element(),
             );
