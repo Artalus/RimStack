@@ -169,7 +169,7 @@ footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--lin
           <li><a href="#mods-lists">Two lists</a></li>
           <li><a href="#mods-view">View and columns</a></li>
           <li><a href="#mods-categories">Categories</a></li>
-          <li><a href="#mods-save">Save, Undo, Redo</a></li>
+          <li><a href="#mods-save">Deploy, Undo, Redo</a></li>
           <li><a href="#mods-sort">Sort</a></li>
           <li><a href="#mods-problems">Problems</a></li>
           <li><a href="#mods-details">A mod's details</a></li>
@@ -305,7 +305,7 @@ footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--lin
     <div class="grid">
       <div class="card"><h3>Reads the code</h3><p>Harmony patches and XML patches become load order rules, shown as "Detected from files".</p></div>
       <div class="card"><h3>Automatic categories</h3><p>Loaders, game and DLC, libraries, content, patches, textures, interface, performance. From what is in the mod, never its name. Override any of them.</p></div>
-      <div class="card"><h3>Only changes your mod order</h3><p>Save writes one file, your mod list, and keeps the old one beside it. Anything else it writes, it does when you ask.</p></div>
+      <div class="card"><h3>Only changes your mod order</h3><p>Deploy writes one file, your mod list, and keeps the old one beside it. Anything else it writes, it does when you ask.</p></div>
     </div>
 
     <h2>What else</h2>
@@ -350,15 +350,15 @@ footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--lin
 
 <h3 id="start-window">The window</h3>
 <ul class="points">
-  <li><b>Top bar.</b> The <b>Lists</b> menu, the eight sections, the search box (<kbd>Ctrl</kbd> <kbd>K</kbd>) and <b>Play</b>. A badge on Play counts what is in the way of a good launch, such as errors or unsaved changes. Pressing Play then lists them, with the fix for each, or lets you play anyway. While the game runs, Play reads Running.</li>
+  <li><b>Top bar.</b> The <b>Lists</b> menu, the eight sections, the search box (<kbd>Ctrl</kbd> <kbd>K</kbd>) and <b>Play</b>. A badge on Play counts what is in the way of a good launch, such as errors or changes not deployed. A yellow dot on <b>List</b> means the load order has changes the list in use was not updated with; while the Lists menu is open, the dot sits on that list's row. Pressing Play then lists them, with the fix for each, or lets you play anyway. While the game runs, Play reads Running.</li>
   <li><b>Status bar.</b> When the game was last started and how many different errors its log shows. Click it to open Logs. On the right: the work running in the background, the heart for the Discord and ways to support RimStack, <b>Keys</b> for every shortcut, and <b>History</b> for what RimStack changed.</li>
   <li><b>Sections.</b> <kbd>Ctrl</kbd> <kbd>1</kbd> to <kbd>8</kbd> switch between Mods, Downloads, Textures, Workshop, Saves, Logs, Search and Settings.</li>
 </ul>
 
 <h3 id="start-writes">What RimStack writes</h3>
 <div class="callout">
-  <p><strong>Nothing reaches the game before Save.</strong> Moving, activating, sorting and loading a list all change the list in RimStack only, and each step can be undone.</p>
-  <p>Save writes one file, the game's <code>ModsConfig.xml</code>. The file as it was is copied beside it first, as <code>.rimstack-backup</code>. The very first time, it is also copied as <code>.rimstack-original</code>, and Settings can bring that list back.</p>
+  <p><strong>Nothing reaches the game before Deploy.</strong> Moving, activating, sorting and loading a list all change the list in RimStack only, and each step can be undone.</p>
+  <p>Deploy writes one file, the game's <code>ModsConfig.xml</code>. The file as it was is copied beside it first, as <code>.rimstack-backup</code>. The very first time, it is also copied as <code>.rimstack-original</code>, and Settings can bring that list back.</p>
 </div>
 <p>Everything else that writes happens only when you ask:</p>
 <ul class="points">
@@ -385,7 +385,7 @@ footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--lin
     <div class="tablewrap"><table>
       <tbody>
         <tr><td><kbd>Ctrl</kbd> <kbd>1</kbd> to <kbd>8</kbd></td><td>Go to a section</td></tr>
-        <tr><td><kbd>Ctrl</kbd> <kbd>S</kbd></td><td>Save the load order</td></tr>
+        <tr><td><kbd>Ctrl</kbd> <kbd>S</kbd></td><td>Update the list in use</td></tr>
         <tr><td><kbd>Ctrl</kbd> <kbd>Z</kbd> · <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd></td><td>Undo · Redo</td></tr>
         <tr><td><kbd>Enter</kbd></td><td>Activate or deactivate the selected mod</td></tr>
         <tr><td><kbd>Alt</kbd> <kbd>Up</kbd> · <kbd>Alt</kbd> <kbd>Down</kbd></td><td>Move the mod one place</td></tr>
@@ -433,8 +433,8 @@ footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--lin
 <h3 id="mods-categories">Categories</h3>
 <p>RimStack files every mod under one category from what is inside it, never from its name: loaders, game and DLC, libraries, content, patches, textures, interface, performance. Categories load in a fixed order, which is a large part of a sensible load order with no rules at all. Choose another one for any mod under <b>Filed under</b> in its About tab, and your choice stands over RimStack's.</p>
 
-<h3 id="mods-save">Save, Undo, Redo</h3>
-<p>Every change happens in RimStack first. <b>Save</b> (<kbd>Ctrl</kbd> <kbd>S</kbd>) lights up when the list differs from the game's file, and writes it. <kbd>Ctrl</kbd> <kbd>Z</kbd> and <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd> undo and redo every list change. If the game's file changes outside RimStack, you are offered its list instead of having it taken for you.</p>
+<h3 id="mods-save">Deploy, Undo, Redo</h3>
+<p>Every change happens in RimStack first. <b>Deploy</b> lights up when the load order differs from the game's file, and writes it; until then a blue <b>Not deployed</b> band says what changed. A yellow <b>List not updated</b> band says the load order differs from the saved list in use; its <b>Update</b>, or <kbd>Ctrl</kbd> <kbd>S</kbd>, saves the load order to that list without touching the game. <kbd>Ctrl</kbd> <kbd>Z</kbd> and <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd> undo and redo every list change. If the game's file changes outside RimStack, you are offered its list instead of having it taken for you.</p>
 
 <h3 id="mods-sort">Sort</h3>
 <p>Sort never changes the list by itself. It shows the order your rules ask for, with every move and the rule behind it, and you choose <b>Apply</b> or <b>Discard</b>.</p>
@@ -530,13 +530,13 @@ footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--lin
 <div class="split">
   <div>
     <p>The <b>Lists</b> menu at the top keeps named copies of your load order. <b>Use</b> one to bring it back, or <b>Update</b> it with the current list. RimStack asks first before saving over another list, before deleting one, and before using another list while the load order has changes the one in use was not updated with. <b>New</b> starts a load order from <b>Only the game</b> or <b>The game and its expansions</b>; one Undo brings the old one back. <b>Earlier</b> holds the order as it was before each Sort.</p>
-    <p><b>Copy the load order</b> puts it on the clipboard as text, one mod a line. <b>Share on Rentry.co</b> publishes it as a page at a public link and copies the link; the code that edits that page is shown once and not kept. <b>Use the copied list</b> turns a list someone sent you, as names, Workshop links or a Rentry.co link, into your load order. Nothing is written before Save.</p>
+    <p><b>Copy the load order</b> puts it on the clipboard as text, one mod a line. <b>Share on Rentry.co</b> publishes it as a page at a public link and copies the link; the code that edits that page is shown once and not kept. <b>Use the copied list</b> turns a list someone sent you, as names, Workshop links or a Rentry.co link, into your load order. Nothing is written before Deploy.</p>
   </div>
   <figure><img src="img/lists.webp" alt="The Lists menu: saved lists with New, a name for the current list, and Clipboard and Rentry.co with Copy the load order, Use the copied list and Share on Rentry.co" loading="lazy" width="380" height="215"></figure>
 </div>
 
 <h3 id="mods-history">History</h3>
-<p><b>History</b>, in the status bar, lists what RimStack changed: the load order as it was before each change, and textures it hid. Each can be brought back, and a load order brought back is written only on Save.</p>
+<p><b>History</b>, in the status bar, lists what RimStack changed: the load order as it was before each change, and textures it hid. Each can be brought back, and a load order brought back is written only on Deploy.</p>
 
 <h3 id="mods-broken">Find the broken mod</h3>
 <p>When something breaks and you don't know which mod causes it, RimStack can halve the list until one mod is left:</p>
@@ -635,7 +635,7 @@ footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--lin
 <ul class="points">
   <li>The colony: name, colonists, settlements, storyteller, difficulty, scenario and seed.</li>
   <li><b>Differences from the current list:</b> mods the save was played with that are not installed, or not active now, mods active now that it was not played with, and whether the shared mods are in another order.</li>
-  <li><b>Use this save's mod list</b> makes it your load order on the Mods screen. Save writes it.</li>
+  <li><b>Use this save's mod list</b> makes it your load order on the Mods screen. Deploy writes it.</li>
   <li><b>Save its list as…</b> keeps it under <a href="#mods-saved-lists">saved lists</a>.</li>
 </ul>
 
@@ -686,7 +686,7 @@ footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--lin
 <ul class="points">
   <li><b>Folders.</b> The game, its config and saves, and Workshop mods, found through Steam. Type another folder to use it. RimStack checks it after a pause, refuses one that isn't right, and reads the mods of one that is. Empty the box to have it found again.</li>
   <li><b>Play starts the game</b> through Steam, or directly from its folder for a copy that isn't Steam's. <b>Launch arguments</b> are passed to the game, as in Steam's own launch options.</li>
-  <li><b>Load order.</b> The file Save writes, and the copies kept beside it.</li>
+  <li><b>Load order.</b> The file Deploy writes, and the copies kept beside it.</li>
   <li><b>Updates.</b> <b>Update by themselves</b> and <b>How often</b>, from every minute to every hour. Whether Git is installed, and <b>Git for Workshop mods</b>, which checks Workshop mods kept as Git checkouts too.</li>
 </ul>
 
