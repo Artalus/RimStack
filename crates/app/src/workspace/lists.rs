@@ -203,8 +203,8 @@ impl App {
         }
     }
 
-    pub fn list_named(&self, name: &str) -> Option<Vec<String>> {
-        lists::load(&self.lists_dir(), name).ok()
+    pub fn list_named(&self, name: &str) -> Result<Vec<String>, Error> {
+        lists::load(&self.lists_dir(), name)
     }
 
     pub fn snapshot_named(&self, name: &str) -> Option<Vec<String>> {
@@ -295,7 +295,7 @@ mod tests {
         assert_eq!(app.saved_lists()[0].mods, 1);
         assert_eq!(app.list_named("Mine").unwrap(), ["a.b"]);
         app.delete_list("Mine");
-        assert!(app.list_named("Mine").is_none());
+        assert!(app.list_named("Mine").is_err());
 
         let snapshot = app.snapshot("@saving", &["a.b".to_string()]).unwrap();
         app.settle_writes();

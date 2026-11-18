@@ -162,6 +162,16 @@ impl Lists {
         self.close(window, cx);
     }
 
+    fn use_list(&mut self, name: &str, window: &mut Window, cx: &mut Context<Self>) {
+        match super::app(cx).list_named(name) {
+            Ok(ids) => self.use_ids(ids, name, window, cx),
+            Err(problem) => {
+                self.problem = crate::words::said_of(&problem);
+                cx.notify();
+            }
+        }
+    }
+
     /// Kept off the window's thread; `typed`: the name field is emptied once it is.
     fn keep(&mut self, name: &str, typed: bool, cx: &mut Context<Self>) {
         let (app, name) = (super::app(cx), name.trim().to_string());
@@ -392,17 +402,9 @@ impl Lists {
                         put(&say_n!(saved.mods, "{} mod", "{} mods")),
                     ))
                     .child(update)
-                    .child(
-                        Btn::new(("use-list", at), put(&say!("Use"))).on_click(cx.listener(
-                            move |lists, _, window, cx| {
-                                if let Some(ids) = super::app(cx).list_named(&used) {
-                                    lists.use_ids(ids, &used, window, cx);
-                                } else {
-                                    lists.close(window, cx);
-                                }
-                            },
-                        )),
-                    )
+                    .child(Btn::new(("use-list", at), put(&say!("Use"))).on_click(
+                        cx.listener(move |lists, _, window, cx| lists.use_list(&used, window, cx)),
+                    ))
                     .child(
                         Btn::new(("delete-list", at), "")
                             .icon("trash-2")
