@@ -424,9 +424,9 @@ footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--lin
 <p>The <b>View</b> menu, at the end of the load order's headings, chooses how the list is shown:</p>
 <ul class="points">
   <li><b>Under category headings</b> or <b>One numbered list</b>.</li>
-  <li><b>Order:</b> the load order itself, or by Name, Author, Version, Package id, Updated, Downloaded, Activated, Size, or Load once the game's log has timed the mods. Only the view changes; the load order stays as it is.</li>
+  <li><b>Order:</b> the load order itself, or by Name, Author, Version, Package id, Updated, Downloaded, Activated, Size, List, or Load once the game's log has timed the mods. Only the view changes; the load order stays as it is.</li>
   <li><b>Group</b> shows each category once, and inside it each tag once, wherever those mods sit in the load order.</li>
-  <li><b>Columns:</b> Author, Version, Load, Updated, Downloaded, Activated and Size.</li>
+  <li><b>Columns:</b> Author, Version, Load, Updated, Downloaded, Activated, Size and List.</li>
 </ul>
 <p>Click a heading to order by it, again to reverse. Drag a heading, or press <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>Left</kbd> or <kbd>Right</kbd>, to move it, and drag an edge to size the column left of it. Columns keep their proportions at any window size, and a list too narrow for them scrolls sideways. The Inactive list has its own columns and order, by category at first. Settings has row sizes: Compact, Roomy, and With pictures, which shows each mod's preview.</p>
 
@@ -506,6 +506,8 @@ footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--lin
     <tr><td><code>defines:</code> <code>patchesdef:</code></td><td>that define, or patch, this defName exactly</td></tr>
     <tr><td><code>patches:</code></td><td>that patch this method of the game</td></tr>
     <tr><td><code>in:search</code></td><td>with matches in the last <a href="#search">Search</a></td></tr>
+    <tr><td><code>in:list</code></td><td>active, and not from the lists the <a href="#mods-saved-lists">saved list</a> in use builds on</td></tr>
+    <tr><td><code>in:lists:base,qol</code></td><td>in any of these saved lists; <code>in:lists:*</code>, in any</td></tr>
     <tr><td><code>tag:</code> · <code>author:</code></td><td>with this tag · by this author; after <code>tag:</code> the box offers your tags</td></tr>
     <tr><td><code>!</code> before any of them, or a word</td><td>without it: <code>!tag:hud !is:workshop</code> leaves out mods tagged HUD and Workshop mods</td></tr>
   </tbody>
@@ -529,7 +531,8 @@ footer { margin: 72px 0 40px; padding-top: 22px; border-top: 1px solid var(--lin
 <h3 id="mods-saved-lists">Lists, Rentry and the clipboard</h3>
 <div class="split">
   <div>
-    <p>The <b>Lists</b> menu at the top keeps named copies of your load order. <b>Use</b> one to bring it back, or <b>Update</b> it with the current list. RimStack asks first before saving over another list, before deleting one, and before using another list while the load order has changes the one in use was not updated with. <b>New</b> starts a load order from <b>Only the game</b> or <b>The game and its expansions</b>; one Undo brings the old one back. <b>Earlier</b> holds the order as it was before each Sort.</p>
+    <p>The <b>Lists</b> menu at the top keeps named copies of your load order. <b>Use</b> one to bring it back, or <b>Update</b> it with the current list. RimStack asks first before saving over another list, before deleting one, whose mods the lists built on it keep, and before using another list while the load order has changes the one in use was not updated with. <b>New</b> starts a load order from <b>Only the game</b> or <b>The game and its expansions</b>; one Undo brings the old one back. <b>Earlier</b> holds the order as it was before each Sort.</p>
+    <p>A list can build on others: tick them in the menu of the layers button on its row, which stays open; ticking one brings its mods into the list, and into the load order when it goes by that list. Unticking one whose mods no other list underneath gives asks whether the list keeps them or shrinks down to its own. <b>Use</b> then gives their mods, less the ones it turned off and with the ones it added, in its own order. <b>Update</b> keeps only what it changes from them, so a mod added to or removed from a list underneath reaches every list built on it, next to the mod it followed there. A mod a list turns off stays off in every list built on it, until one of them turns it on again. A row counts every mod the list gives, and its layers button how many lists it builds on, how many are underneath it in all, and how many mods it adds and turns off, as ×2(3)  +3  −1. While the load order goes by such a list, the rows of the mods from the lists underneath are dimmed, with the layers icon under their category's, and the List column names the list each comes from; <code>in:list</code> shows the others. Such a mod's menu has <b>Remove from</b> that list, which takes it out of the list and so out of every list built on it. A mod from a list underneath that the load order lacks, deactivated or turned off by the list, keeps its row, crossed out and without a number and its <b>−</b> button, even after Update; only a sort moves it. Pointing at its name names both lists. Deploy leaves it out. While the load order goes by a list that others build on and has changes that list was not updated with, the List not updated note names those lists.</p>
     <p><b>Copy the load order</b> puts it on the clipboard as text, one mod a line. <b>Share on Rentry.co</b> publishes it as a page at a public link and copies the link; the code that edits that page is shown once and not kept. <b>Use the copied list</b> turns a list someone sent you, as names, Workshop links or a Rentry.co link, into your load order. Nothing is written before Deploy.</p>
   </div>
   <figure><img src="img/lists.webp" alt="The Lists menu: saved lists with New, a name for the current list, and Clipboard and Rentry.co with Copy the load order, Use the copied list and Share on Rentry.co" loading="lazy" width="380" height="215"></figure>
