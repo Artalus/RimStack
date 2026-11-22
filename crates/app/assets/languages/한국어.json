@@ -105,6 +105,7 @@
  "Keep {} from {} in {}, or shrink it down to its own {}?": "{} 유지: {}에서 온 모드를 {}에 남길까요, 아니면 자체 {}로 줄일까요?",
  "Keeps the list here; the next Deploy overwrites ModsConfig.xml": "현재 목록을 유지합니다. 다음에 배포하면 ModsConfig.xml의 현재 내용을 교체합니다",
  "List not updated: {}": "목록을 업데이트하지 않음: {}",
+ "Lists built on it keep its mods: {}": "이 목록을 기반으로 한 목록은 모드를 유지합니다: {}",
  "No problems, and the load order is deployed.": "문제가 없으며 배열을 배포했습니다.",
  "Not deployed: {}": "배포하지 않음: {}",
  "Not updated": "업데이트 안 됨",

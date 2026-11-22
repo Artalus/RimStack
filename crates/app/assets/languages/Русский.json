@@ -108,6 +108,7 @@
  "Keep {} from {} in {}, or shrink it down to its own {}?": "Оставить {} из {} в {} или сократить до собственных {}?",
  "Keeps the list here; the next Deploy overwrites ModsConfig.xml": "Оставляет список здесь; следующее развёртывание заменит то, что сейчас в ModsConfig.xml",
  "List not updated: {}": "Список не обновлён: {}",
+ "Lists built on it keep its mods: {}": "Списки на его основе сохранят его моды: {}",
  "No problems, and the load order is deployed.": "Проблем нет, и порядок загрузки развёрнут.",
  "Not deployed: {}": "Не развёрнуто: {}",
  "Not updated": "Не обновлён",

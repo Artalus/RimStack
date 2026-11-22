@@ -279,7 +279,19 @@ pub fn merge(into: &mut Vec<String>, from: &[String]) {
     }
 }
 
+/// The lists built on `name` keep the mods it gave them, and build on what it built on.
 pub fn delete(dir: &Path, name: &str) -> Result<(), Error> {
+    let found = all(dir);
+    let below = found
+        .iter()
+        .find(|s| s.name == name)
+        .map(|s| s.bases.clone());
+    for user in found.iter().filter(|s| s.bases.iter().any(|u| u == name)) {
+        let mut bases = minus(&user.bases, &[name.to_string()]);
+        let inherited = minus(below.as_deref().unwrap_or_default(), &bases);
+        bases.extend(inherited);
+        build_on(dir, &user.name, &bases, &[])?;
+    }
     let path = file_for(dir, name);
     std::fs::remove_file(&path).map_err(|e| Error::file(&path, e))
 }
@@ -432,6 +444,19 @@ mod tests {
         assert_eq!(left, ids(&["g", "h", "i"]));
         build_on(dir, "raiders", &modern, &left).unwrap();
         assert_eq!(load(dir, "raiders").unwrap(), load(dir, "modern").unwrap());
+    }
+
+    #[test]
+    fn the_lists_built_on_a_deleted_list_keep_its_mods() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        mods(dir);
+        let (medieval, modern) = (load(dir, "medieval").unwrap(), load(dir, "modern").unwrap());
+        delete(dir, "qol").unwrap();
+        assert_eq!(load(dir, "medieval").unwrap(), medieval);
+        assert_eq!(load(dir, "modern").unwrap(), modern);
+        let modern = super::all(dir).into_iter().find(|s| s.name == "modern");
+        assert_eq!(modern.unwrap().bases, ids(&["base"]));
     }
 
     #[test]

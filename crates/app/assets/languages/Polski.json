@@ -107,6 +107,7 @@
  "Keep {} from {} in {}, or shrink it down to its own {}?": "Zachować {} z {} w {}, czy zmniejszyć do jej własnych {}?",
  "Keeps the list here; the next Deploy overwrites ModsConfig.xml": "Zachowuje listę stąd; następne Wdróż zastąpi to, co ModsConfig.xml zawiera teraz",
  "List not updated: {}": "Lista nie zaktualizowana: {}",
+ "Lists built on it keep its mods: {}": "Listy na niej oparte zachowują jej mody: {}",
  "No problems, and the load order is deployed.": "Brak problemów, a kolejność ładowania jest wdrożona.",
  "Not deployed: {}": "Nie wdrożono: {}",
  "Not updated": "Nie zaktualizowano",

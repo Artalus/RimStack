@@ -519,7 +519,17 @@ impl Lists {
                 "Saves the current load order as {}, replacing what it held",
                 name.clone()
             ));
-            let deleting = vec![put(&say!("This cannot be undone."))];
+            let used_by: Vec<&str> = self
+                .saved
+                .iter()
+                .filter(|s| s.bases.contains(&name))
+                .map(|s| s.name.as_str())
+                .collect();
+            let mut deleting = vec![put(&say!("This cannot be undone."))];
+            if !used_by.is_empty() {
+                let note = say!("Lists built on it keep its mods: {}", used_by.join(", "));
+                deleting.push(put(&note));
+            }
             let unkept = changed && current == name;
             let update = Btn::new(
                 ("update-list", at),
@@ -611,7 +621,8 @@ impl Lists {
                                 let deleted = deleted.clone();
                                 let title = put(&say!("Delete {}?", deleted));
                                 let then = move |_: &mut Self, _: &mut Window, cx: &mut Context<Self>| {
-                                    super::app(cx).delete_list(&deleted)
+                                    let app = super::app(cx);
+                                    crate::jobs::run("list deleted", cx, move || app.delete_list(&deleted), |_, _, _| {});
                                 };
                                 let label = put(&say!("Delete"));
                                 lists.ask_then(title, deleting.clone(), label, true, then, window, cx);
