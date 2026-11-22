@@ -416,8 +416,15 @@ impl DetailsView {
                 d.child(Chip::new(put(&say!("updated {}", ago.inside()))).max_width(inner))
             });
         let active = self.shown.selected_active;
-        let toggle = if active {
+        let toggle = if active
+            && crate::ui::app(cx)
+                .stacks()
+                .comes_from(&details.package_id)
+                .is_some()
+        {
             put(&say!("Deactivate"))
+        } else if active {
+            put(&say!("Remove"))
         } else {
             put(&say!("Activate"))
         };

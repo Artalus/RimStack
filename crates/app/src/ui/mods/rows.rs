@@ -181,7 +181,8 @@ fn hover_buttons(
                     "row-across",
                     if active { "minus" } else { "plus" },
                     match active {
-                        true => put(&say!("Deactivate")),
+                        true if !row.from.is_empty() => put(&say!("Deactivate")),
+                        true => put(&say!("Remove")),
                         false => put(&say!("Activate")),
                     },
                 )

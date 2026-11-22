@@ -287,13 +287,16 @@ impl LoadOrder {
 
     fn moving(&self, app: &App, at: &Clicked, subject: &Subject, many: bool) -> Vec<Entry> {
         let count = at.selected.len();
+        let under = app.stacks();
+        let from = under.comes_from(&subject.package_id);
         let text = subject
             .take_off
             .clone()
             .unwrap_or_else(|| match (many, at.active) {
                 (true, true) => say_n!(count, "Deactivate {} mod", "Deactivate {} mods"),
                 (true, false) => say_n!(count, "Activate {} mod", "Activate {} mods"),
-                (false, true) => say!("Deactivate"),
+                (false, true) if from.is_some() => say!("Deactivate"),
+                (false, true) => say!("Remove"),
                 (false, false) => say!("Activate"),
             });
         let action = if many {
@@ -306,8 +309,6 @@ impl LoadOrder {
         };
         let icon = if at.active { "minus" } else { "plus" };
         let mut group = vec![Entry::item(text, icon, action).off(self.previewing())];
-        let under = app.stacks();
-        let from = under.comes_from(&subject.package_id);
         if let Some(list) = from.filter(|_| !many) {
             let action = Action::RemoveFrom {
                 active: at.active,
