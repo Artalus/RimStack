@@ -16,8 +16,11 @@ use gpui::{
     prelude::FluentBuilder, px,
 };
 use rimstack_core::base::error::Error;
+use rimstack_core::base::sentence::Sentence;
 use rimstack_core::kept::lists::Saved;
 use rimstack_core::{say, say_n};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Which {
@@ -248,6 +251,23 @@ impl Lists {
         );
     }
 
+    fn build_on(&mut self, name: &str, bases: &[String], cx: &mut Context<Self>) {
+        let (app, in_use) = (super::app(cx), self.list_name(cx) == name);
+        let (name, bases) = (name.to_string(), bases.to_vec());
+        crate::jobs::run(
+            "list built on",
+            cx,
+            move || app.build_list_on(&name, &bases, in_use),
+            |lists, built, cx| {
+                if let Ok(Some(ids)) = &built {
+                    super::navigate::go(super::navigate::Go::TakeList(ids.clone()), cx);
+                }
+                lists.problem = crate::words::why_not(&built);
+                cx.notify();
+            },
+        );
+    }
+
     fn keep_typed(&mut self, cx: &mut Context<Self>) {
         let name = self.name.read(cx).text().trim().to_string();
         if !name.is_empty() {
@@ -422,6 +442,27 @@ impl Lists {
         for (at, saved) in self.saved.iter().enumerate() {
             let name = saved.name.clone();
             let (kept, used, deleted) = (name.clone(), name.clone(), name.clone());
+            let (label_under, tip_under) = if saved.under.is_empty() {
+                (String::new(), put(&say!("The lists it builds on")))
+            } else {
+                let (bases, total) = (saved.bases.len(), saved.under.len());
+                let mut label = format!("×{bases}({total})");
+                let mut tip = vec![say_n!(
+                    bases,
+                    "Builds on {} list ({} total)",
+                    "Builds on {} lists ({} total)",
+                    total
+                )];
+                if saved.adds > 0 {
+                    label += &format!("  +{}", saved.adds);
+                    tip.push(say_n!(saved.adds, "adds {} mod", "adds {} mods"));
+                }
+                if saved.drops > 0 {
+                    label += &format!("  −{}", saved.drops);
+                    tip.push(say_n!(saved.drops, "disables {} mod", "disables {} mods"));
+                }
+                (label, put(&Sentence::joined("; ", tip)))
+            };
             let replaces = put(&say!(
                 "Saves the current load order as {}, replacing what it held",
                 name.clone()
@@ -482,6 +523,13 @@ impl Lists {
                         c.ink3,
                         put(&say_n!(saved.mods, "{} mod", "{} mods")),
                     ))
+                    .child(
+                        Btn::new(("bases-list", at), label_under)
+                            .icon("layers")
+                            .tip(tip_under)
+                            .enabled(self.saved.len() > 1)
+                            .pops(self.bases_menu(saved, cx)),
+                    )
                     .child(update)
                     .child(
                         Btn::new(("use-list", at), put(&say!("Use"))).on_click(cx.listener(
@@ -639,6 +687,50 @@ impl Lists {
         shown
     }
 
+    /// The ticks of a saved list's menu are the lists it builds on.
+    fn bases_menu(
+        &self,
+        saved: &Saved,
+        cx: &mut Context<Self>,
+    ) -> impl Fn(gpui::Bounds<gpui::Pixels>, &mut Window, &mut gpui::App) + 'static {
+        let (me, name, bases) = (
+            cx.entity().downgrade(),
+            saved.name.clone(),
+            saved.bases.clone(),
+        );
+        let others: Vec<String> = self
+            .saved
+            .iter()
+            .map(|s| s.name.clone())
+            .filter(|n| *n != name)
+            .collect();
+        move |below, window, cx| {
+            // Shared so ticks add up while the menu stays open.
+            let bases = Rc::new(RefCell::new(bases.clone()));
+            let entries: Vec<Entry> = others
+                .iter()
+                .map(|other| {
+                    let (me, name, other_name, shared) =
+                        (me.clone(), name.clone(), other.clone(), bases.clone());
+                    Entry::item(other.clone(), move |_, cx| {
+                        let mut bases = shared.borrow_mut();
+                        let had = bases.len();
+                        bases.retain(|u| *u != other_name);
+                        if bases.len() == had {
+                            bases.push(other_name.clone());
+                        }
+                        let next = bases.clone();
+                        drop(bases);
+                        let _ = me.update(cx, |lists, cx| lists.build_on(&name, &next, cx));
+                    })
+                    .ticks(bases.borrow().contains(other))
+                    .into()
+                })
+                .collect();
+            menu::open(below, entries, window, cx);
+        }
+    }
+
     fn history_popup(&self, theme: &Theme, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let c = &theme.colours;
         let mut shown =
@@ -739,7 +831,7 @@ impl Render for Lists {
             Which::Lists => popup
                 .left(below.left())
                 .top(below.bottom() + px(6.))
-                .w(theme.sized(380.))
+                .w(theme.sized(460.))
                 .child(column),
             Which::History => popup
                 .right(viewport.width - below.right())

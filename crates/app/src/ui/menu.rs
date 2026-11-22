@@ -29,6 +29,7 @@ pub struct Item {
     colour: Option<Hsla>,
     off: bool,
     danger: bool,
+    ticks: bool,
     run: Run,
 }
 
@@ -45,6 +46,7 @@ impl Entry {
             colour: None,
             off: false,
             danger: false,
+            ticks: false,
             run: Rc::new(run),
         }
     }
@@ -54,6 +56,12 @@ impl Item {
     pub fn icon(mut self, name: &'static str) -> Self {
         self.icon = Some(name);
         self
+    }
+
+    /// One of several to tick: choosing it flips its check and leaves the menu open.
+    pub fn ticks(mut self, ticked: bool) -> Self {
+        self.ticks = true;
+        self.icon(if ticked { "check" } else { "" })
     }
 
     pub fn note(mut self, note: impl Into<SharedString>) -> Self {
@@ -216,13 +224,22 @@ impl Menu {
         }
         let Some(Entry::Item(item)) = self
             .entries
-            .get(at)
+            .get_mut(at)
             .filter(|e| matches!(e, Entry::Item(i) if !i.off))
         else {
             return;
         };
         let run = item.run.clone();
-        self.close(window, cx);
+        if item.ticks {
+            item.icon = Some(if item.icon == Some("check") {
+                ""
+            } else {
+                "check"
+            });
+            cx.notify();
+        } else {
+            self.close(window, cx);
+        }
         run(window, cx);
     }
 

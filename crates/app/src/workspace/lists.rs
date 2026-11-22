@@ -203,6 +203,24 @@ impl App {
         }
     }
 
+    /// `in_use`: the load order goes by `name`; what it gets of the mods it now gives, if any.
+    pub fn build_list_on(
+        &self,
+        name: &str,
+        bases: &[String],
+        in_use: bool,
+    ) -> Result<Option<Vec<String>>, Error> {
+        lists::build_on(&self.lists_dir(), name, bases)?;
+        self.publish(Changes::LISTS);
+        if !in_use {
+            return Ok(None);
+        }
+        let current = self.session().current().to_vec();
+        let mut ids = current.clone();
+        lists::merge(&mut ids, &lists::load(&self.lists_dir(), name)?);
+        Ok((ids != current).then_some(ids))
+    }
+
     pub fn list_named(&self, name: &str) -> Result<Vec<String>, Error> {
         lists::load(&self.lists_dir(), name)
     }
