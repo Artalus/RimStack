@@ -160,6 +160,37 @@ impl Mods {
         match action {
             Action::MoveSelected => self.move_selected(cx),
             Action::MoveAcross { active, index } => self.take(Side::of(*active), *index, None, cx),
+            Action::RemoveFrom {
+                active,
+                index,
+                list,
+            } => {
+                let Some(id) = self
+                    .list
+                    .read(cx)
+                    .order
+                    .list(Side::of(*active))
+                    .mods()
+                    .get(*index)
+                else {
+                    return;
+                };
+                let (app, id, list) = (crate::ui::app(cx), id.id.clone(), list.clone());
+                if *active {
+                    self.take(Side::Active, *index, None, cx);
+                }
+                crate::jobs::run(
+                    "taken out of list",
+                    cx,
+                    move || app.take_out_of_list(&list, &id),
+                    |_, done, cx| {
+                        if let Err(problem) = done {
+                            let said = crate::words::said_of(&problem);
+                            notices::say(said, notices::Tone::Err, cx);
+                        }
+                    },
+                );
+            }
             Action::OpenFolder { path } => cx.open_with_system(std::path::Path::new(path)),
             Action::OpenUrl { url } => cx.open_url(url),
             Action::CopyText { value } => {

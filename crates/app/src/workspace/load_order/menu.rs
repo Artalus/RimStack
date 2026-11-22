@@ -21,6 +21,11 @@ pub enum Action {
         active: bool,
         index: usize,
     },
+    RemoveFrom {
+        active: bool,
+        index: usize,
+        list: String,
+    },
     OpenFolder {
         path: String,
     },
@@ -266,7 +271,7 @@ impl LoadOrder {
         } else {
             Vec::new()
         };
-        let mut groups = vec![self.moving(at, &subject, many)];
+        let mut groups = vec![self.moving(app, at, &subject, many)];
         groups.push(Self::opening(&subject));
         groups.push(Self::fetching(at, &subject));
         if subject.workshop {
@@ -280,7 +285,7 @@ impl LoadOrder {
         separated(groups)
     }
 
-    fn moving(&self, at: &Clicked, subject: &Subject, many: bool) -> Vec<Entry> {
+    fn moving(&self, app: &App, at: &Clicked, subject: &Subject, many: bool) -> Vec<Entry> {
         let count = at.selected.len();
         let text = subject
             .take_off
@@ -300,7 +305,19 @@ impl LoadOrder {
             }
         };
         let icon = if at.active { "minus" } else { "plus" };
-        vec![Entry::item(text, icon, action).off(self.previewing())]
+        let mut group = vec![Entry::item(text, icon, action).off(self.previewing())];
+        let under = app.stacks();
+        let from = under.comes_from(&subject.package_id);
+        if let Some(list) = from.filter(|_| !many) {
+            let action = Action::RemoveFrom {
+                active: at.active,
+                index: at.index,
+                list: list.clone(),
+            };
+            let text = say!("Remove from {}", list);
+            group.push(Entry::item(text, "minus", action).off(self.previewing()));
+        }
+        group
     }
 
     fn opening(subject: &Subject) -> Vec<Entry> {

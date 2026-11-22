@@ -225,6 +225,12 @@ impl App {
         Ok(())
     }
 
+    pub fn take_out_of_list(&self, name: &str, id: &str) -> Result<(), Error> {
+        lists::take_out(&self.lists_dir(), name, id)?;
+        self.publish(Changes::LISTS);
+        Ok(())
+    }
+
     pub fn delete_list(&self, name: &str) {
         match lists::delete(&self.lists_dir(), name) {
             Ok(()) => self.publish(Changes::LISTS),

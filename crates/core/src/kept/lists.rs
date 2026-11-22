@@ -267,6 +267,14 @@ pub fn delete(dir: &Path, name: &str) -> Result<(), Error> {
     std::fs::remove_file(&path).map_err(|e| Error::file(&path, e))
 }
 
+/// Takes `id` out of `name`, and so out of every list built on it.
+pub fn take_out(dir: &Path, name: &str, id: &str) -> Result<(), Error> {
+    let key = |id: &str| crate::rimworld::id::split_steam(id).0;
+    let mut ids = load(dir, name)?;
+    ids.retain(|kept| key(kept) != key(id));
+    save(dir, name, &ids)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -393,6 +401,17 @@ mod tests {
         let without_z = &all[..9];
         save(dir, "raiders", &ids(without_z)).unwrap();
         assert_eq!(load(dir, "raiders").unwrap(), ids(without_z));
+    }
+
+    #[test]
+    fn a_mod_taken_out_of_a_list_is_gone_from_the_lists_built_on_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        mods(dir);
+        take_out(dir, "base", "B_steam").unwrap();
+        let qol = ["core", "a", "c", "d", "e", "f"];
+        assert_eq!(load(dir, "qol").unwrap(), ids(&qol));
+        assert!(!load(dir, "medieval").unwrap().contains(&"b".to_string()));
     }
 
     #[test]
