@@ -1,14 +1,20 @@
 use crate::base::error::Error;
 use crate::said;
 
-use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct Saved {
     pub name: String,
+    /// With what the lists it builds on give now.
     pub mods: usize,
+    pub bases: Vec<String>,
+    /// Every list under it, the nearest first.
+    pub under: Vec<String>,
+    /// How many mods it adds to and turns off from what they give.
+    pub adds: usize,
+    pub drops: usize,
     /// Seconds since 1970.
     pub modified: u64,
 }
@@ -30,29 +36,74 @@ fn file_for(dir: &Path, name: &str) -> PathBuf {
     dir.join(format!("{safe}.json"))
 }
 
+/// What a list file holds.
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+struct Kept {
+    name: String,
+    /// The whole load order when it was last saved.
+    ids: Vec<String>,
+    /// The lists it builds on; `adds` and `drops` are what it changes from them.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    bases: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    adds: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    drops: Vec<String>,
+}
+
 pub fn save(dir: &Path, name: &str, ids: &[String]) -> Result<(), Error> {
     if name.trim().is_empty() {
         return Err(Error::refused(said!("Give the list a name.")));
     }
     let path = file_for(dir, name);
-    if let Some((other, _)) = read(&path).filter(|(kept, _)| kept != name.trim()) {
+    let old = read(&path);
+    if let Some(other) = old.as_ref().filter(|k| k.name != name.trim()) {
         return Err(Error::refused(said!(
             "The list {} already uses the same file name. Give this one another name.",
-            other
+            other.name
         )));
     }
-    let text = json!({ "name": name.trim(), "ids": ids }).to_string();
-    crate::base::atomic_file::write(&path, text)
+    let bases = old.map(|k| k.bases).unwrap_or_default();
+    write(dir, name, ids, bases)
 }
 
-fn read(path: &Path) -> Option<(String, Vec<String>)> {
-    let root: Value = serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
-    let ids = root.get("ids")?.as_array()?;
-    let ids = ids
-        .iter()
-        .filter_map(|v| v.as_str().map(String::from))
-        .collect();
-    Some((root.get("name")?.as_str()?.to_string(), ids))
+/// A list built on brings in its mods, but for those `name` turned off.
+pub fn build_on(dir: &Path, name: &str, bases: &[String]) -> Result<(), Error> {
+    let mut ids = load(dir, name)?;
+    let drops = read(&file_for(dir, name))
+        .map(|k| k.drops)
+        .unwrap_or_default();
+    let (given, _) = given(dir, name, bases, &mut Vec::new())?;
+    merge(&mut ids, &minus(&given, &drops));
+    write(dir, name, &ids, bases.to_vec())
+}
+
+fn write(dir: &Path, name: &str, ids: &[String], mut bases: Vec<String>) -> Result<(), Error> {
+    bases.retain(|base| taken(dir, base));
+    let path = file_for(dir, name);
+    let mut kept = Kept {
+        name: name.trim().to_string(),
+        ids: ids.to_vec(),
+        ..Kept::default()
+    };
+    if !bases.is_empty() {
+        let (given, _) = given(dir, name, &bases, &mut Vec::new())?;
+        kept.adds = minus(ids, &given);
+        kept.drops = minus(&given, ids);
+        kept.bases = bases;
+    }
+    crate::base::atomic_file::write_json(&path, &kept)
+}
+
+fn minus(from: &[String], gone: &[String]) -> Vec<String> {
+    from.iter()
+        .filter(|id| !gone.contains(id))
+        .cloned()
+        .collect()
+}
+
+fn read(path: &Path) -> Option<Kept> {
+    serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()
 }
 
 pub fn all(dir: &Path) -> Vec<Saved> {
@@ -61,16 +112,34 @@ pub fn all(dir: &Path) -> Vec<Saved> {
         .flatten()
         .flatten()
         .filter_map(|entry| {
-            let (name, ids) = read(&entry.path())?;
+            let kept = read(&entry.path())?;
             let modified = entry.metadata().ok()?.modified().ok()?;
             Some(Saved {
-                name,
-                mods: ids.len(),
+                mods: load(dir, &kept.name).map_or(kept.ids.len(), |ids| ids.len()),
+                under: under(dir, &kept.name),
+                name: kept.name,
+                bases: kept.bases,
+                adds: kept.adds.len(),
+                drops: kept.drops.len(),
                 modified: modified.duration_since(UNIX_EPOCH).ok()?.as_secs(),
             })
         })
         .collect();
     found.sort_by_key(|s| s.name.to_lowercase());
+    found
+}
+
+/// Breadth-first, so the nearest come first; a file may hold a loop, which `found` stops.
+fn under(dir: &Path, name: &str) -> Vec<String> {
+    let bases = |n: &str| read(&file_for(dir, n)).map(|k| k.bases).unwrap_or_default();
+    let mut found: Vec<String> = Vec::new();
+    let mut queue = std::collections::VecDeque::from(bases(name));
+    while let Some(next) = queue.pop_front() {
+        if next != name && !found.contains(&next) {
+            queue.extend(bases(&next));
+            found.push(next);
+        }
+    }
     found
 }
 
@@ -95,10 +164,75 @@ pub fn taken(dir: &Path, name: &str) -> bool {
 }
 
 pub fn load(dir: &Path, name: &str) -> Result<Vec<String>, Error> {
+    resolve(dir, name, &mut Vec::new()).map(|(ids, _)| ids)
+}
+
+/// Its mods in its own order, and the mods turned off in it or under it.
+fn resolve(
+    dir: &Path,
+    name: &str,
+    seen: &mut Vec<String>,
+) -> Result<(Vec<String>, Vec<String>), Error> {
+    if seen.iter().any(|s| s == name) {
+        return Err(Error::refused(said!("{} builds on itself", name)));
+    }
     let path = file_for(dir, name);
-    read(&path)
-        .map(|(_, ids)| ids)
-        .ok_or_else(|| Error::format(said!("{} is not a saved list", path.display())))
+    let kept = read(&path)
+        .ok_or_else(|| Error::format(said!("{} is not a saved list", path.display())))?;
+    if kept.bases.is_empty() {
+        return Ok((kept.ids, Vec::new()));
+    }
+    // A list it builds on is gone: what it last held, with what the others give.
+    if !kept.bases.iter().all(|base| taken(dir, base)) {
+        let (given, _) = given(dir, name, &kept.bases, seen)?;
+        let mut ids = kept.ids;
+        merge(&mut ids, &minus(&given, &kept.drops));
+        return Ok((ids, kept.drops));
+    }
+    let (given, mut dropped) = given(dir, name, &kept.bases, seen)?;
+    dropped.extend(kept.drops);
+    dropped.retain(|id| !kept.adds.contains(id));
+    let mut ids: Vec<String> = kept
+        .ids
+        .into_iter()
+        .filter(|id| kept.adds.contains(id) || (given.contains(id) && !dropped.contains(id)))
+        .collect();
+    merge(&mut ids, &minus(&given, &dropped));
+    Ok((ids, dropped))
+}
+
+/// What the lists it builds on give: merged in order, less what any of them turned off.
+fn given(
+    dir: &Path,
+    name: &str,
+    bases: &[String],
+    seen: &mut Vec<String>,
+) -> Result<(Vec<String>, Vec<String>), Error> {
+    let (mut merged, mut dropped) = (Vec::new(), Vec::new());
+    seen.push(name.to_string());
+    for base in bases.iter().filter(|base| taken(dir, base)) {
+        let (ids, off) = resolve(dir, base, seen)?;
+        merge(&mut merged, &ids);
+        dropped.extend(off);
+    }
+    seen.pop();
+    merged.retain(|id| !dropped.contains(id));
+    Ok((merged, dropped))
+}
+
+/// Each mod `into` lacks goes after the nearest one it follows in `from`, or first.
+pub fn merge(into: &mut Vec<String>, from: &[String]) {
+    for (i, id) in from.iter().enumerate() {
+        if into.contains(id) {
+            continue;
+        }
+        let at = from[..i]
+            .iter()
+            .rev()
+            .find_map(|before| into.iter().position(|x| x == before))
+            .map_or(0, |p| p + 1);
+        into.insert(at, id.clone());
+    }
 }
 
 pub fn delete(dir: &Path, name: &str) -> Result<(), Error> {
@@ -190,5 +324,111 @@ mod tests {
             load(tmp.path(), "war_crimes").unwrap(),
             ids(&["first.list"])
         );
+    }
+
+    /// As the UI does it: save, build on others, save again.
+    fn stacked(dir: &Path, name: &str, bases: &[&str], saved: &[&str]) {
+        save(dir, name, &ids(&["core"])).unwrap();
+        build_on(dir, name, &ids(bases)).unwrap();
+        save(dir, name, &ids(saved)).unwrap();
+    }
+
+    fn mods(dir: &Path) {
+        save(dir, "base", &ids(&["core", "a", "b", "c"])).unwrap();
+        stacked(
+            dir,
+            "qol",
+            &["base"],
+            &["core", "a", "b", "c", "d", "e", "f"],
+        );
+        let medieval = ["core", "a", "b", "c", "d", "g", "h", "i", "f"];
+        stacked(dir, "medieval", &["qol"], &medieval);
+        stacked(
+            dir,
+            "modern",
+            &["qol"],
+            &["core", "a", "b", "c", "d", "e", "f", "z"],
+        );
+    }
+
+    #[test]
+    fn a_list_built_on_others_keeps_what_they_turned_off() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        mods(dir);
+        save(dir, "raiders", &ids(&["core"])).unwrap();
+        build_on(dir, "raiders", &ids(&["modern", "medieval"])).unwrap();
+        let all = ["core", "a", "b", "c", "d", "g", "h", "i", "f", "z"];
+        assert_eq!(load(dir, "raiders").unwrap(), ids(&all));
+        let raiders = super::all(dir).into_iter().find(|s| s.name == "raiders");
+        let under = ids(&["modern", "medieval", "qol", "base"]);
+        assert_eq!(raiders.unwrap().under, under);
+        let without_z = &all[..9];
+        save(dir, "raiders", &ids(without_z)).unwrap();
+        assert_eq!(load(dir, "raiders").unwrap(), ids(without_z));
+    }
+
+    #[test]
+    fn a_list_follows_the_lists_it_builds_on() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        mods(dir);
+        save(dir, "base", &ids(&["core", "a", "x", "c"])).unwrap();
+        let qol = ["core", "a", "x", "c", "d", "e", "f"];
+        assert_eq!(load(dir, "qol").unwrap(), ids(&qol));
+        let medieval = ["core", "a", "x", "c", "d", "g", "h", "i", "f"];
+        assert_eq!(load(dir, "medieval").unwrap(), ids(&medieval));
+        save(dir, "base", &ids(&["core"])).unwrap();
+        let medieval = all(dir).into_iter().find(|s| s.name == "medieval").unwrap();
+        assert_eq!((medieval.mods, medieval.adds, medieval.drops), (6, 3, 1));
+    }
+
+    #[test]
+    fn a_mod_turned_off_below_comes_back_when_saved_on() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        mods(dir);
+        let mine = ["core", "a", "b", "c", "d", "e", "g", "h", "i", "f"];
+        stacked(dir, "mine", &["medieval"], &mine);
+        assert_eq!(load(dir, "mine").unwrap(), ids(&mine));
+    }
+
+    #[test]
+    fn only_a_list_built_on_others_is_written_with_what_it_changes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        save(dir, "base", &ids(&["a"])).unwrap();
+        let plain = std::fs::read_to_string(dir.join("base.json")).unwrap();
+        assert_eq!(plain, r#"{"name":"base","ids":["a"]}"#);
+        stacked(dir, "top", &["base"], &["a", "b"]);
+        save(dir, "top", &ids(&["b"])).unwrap();
+        let top = all(dir).into_iter().find(|s| s.name == "top").unwrap();
+        assert_eq!(top.bases, ids(&["base"]));
+        let text = std::fs::read_to_string(dir.join("top.json")).unwrap();
+        assert!(text.contains(r#""adds":["b"],"drops":["a"]"#));
+    }
+
+    #[test]
+    fn a_list_cannot_build_on_itself() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        mods(dir);
+        assert!(build_on(dir, "base", &ids(&["qol"])).is_err());
+        assert_eq!(load(dir, "base").unwrap(), ids(&["core", "a", "b", "c"]));
+        assert!(build_on(dir, "base", &ids(&["base"])).is_err());
+    }
+
+    #[test]
+    fn a_list_whose_base_is_gone_is_as_last_saved_until_saved_again() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        mods(dir);
+        let modern = load(dir, "modern").unwrap();
+        std::fs::remove_file(file_for(dir, "qol")).unwrap();
+        assert_eq!(load(dir, "modern").unwrap(), modern);
+        build_on(dir, "modern", &ids(&["qol", "base"])).unwrap();
+        assert_eq!(load(dir, "modern").unwrap(), modern);
+        let saved = super::all(dir).into_iter().find(|s| s.name == "modern");
+        assert_eq!(saved.unwrap().bases, ids(&["base"]));
     }
 }
