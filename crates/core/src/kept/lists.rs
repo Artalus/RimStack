@@ -1,7 +1,7 @@
 use crate::base::error::Error;
 use crate::said;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
@@ -41,7 +41,7 @@ fn file_for(dir: &Path, name: &str) -> PathBuf {
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 struct Kept {
     name: String,
-    /// The whole load order when it was last saved.
+    /// The whole load order when it was last saved; the mods it turns off stay where they were.
     ids: Vec<String>,
     /// The lists it builds on; `adds` and `drops` are what it changes from them.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -99,6 +99,7 @@ pub fn left_behind(all: &[Saved], name: &str, bases: &[String]) -> Vec<String> {
 fn write(dir: &Path, name: &str, ids: &[String], mut bases: Vec<String>) -> Result<(), Error> {
     bases.retain(|base| taken(dir, base));
     let path = file_for(dir, name);
+    let before = read(&path).map(|k| k.ids).unwrap_or_default();
     let mut kept = Kept {
         name: name.trim().to_string(),
         ids: ids.to_vec(),
@@ -107,7 +108,9 @@ fn write(dir: &Path, name: &str, ids: &[String], mut bases: Vec<String>) -> Resu
     if !bases.is_empty() {
         let (given, _) = given(dir, name, &bases, &mut Vec::new())?;
         kept.adds = minus(ids, &given);
-        kept.drops = minus(&given, ids);
+        let drops = minus(&given, ids);
+        kept.ids = with_spots(&before, ids, |id| drops.iter().any(|d| d == id));
+        kept.drops = drops;
         kept.bases = bases;
     }
     crate::base::atomic_file::write_json(&path, &kept)
@@ -133,7 +136,7 @@ pub fn all(dir: &Path) -> Vec<Saved> {
             let kept = read(&entry.path())?;
             let modified = entry.metadata().ok()?.modified().ok()?;
             Some(Saved {
-                mods: load(dir, &kept.name).unwrap_or_else(|_| kept.ids.clone()),
+                mods: load(dir, &kept.name).unwrap_or_else(|_| minus(&kept.ids, &kept.drops)),
                 under: under(dir, &kept.name),
                 name: kept.name,
                 bases: kept.bases,
@@ -183,6 +186,13 @@ pub fn taken(dir: &Path, name: &str) -> bool {
 
 pub fn load(dir: &Path, name: &str) -> Result<Vec<String>, Error> {
     resolve(dir, name, &mut Vec::new()).map(|(ids, _)| ids)
+}
+
+/// The list's whole order, the mods it turns off included.
+pub fn order(dir: &Path, name: &str) -> Vec<String> {
+    read(&file_for(dir, name))
+        .map(|k| k.ids)
+        .unwrap_or_default()
 }
 
 /// The mods the lists `name` builds on give, those it turns off too, each with the lowest list in
@@ -236,7 +246,7 @@ fn resolve(
     // A list it builds on is gone: what it last held, with what the others give.
     if !kept.bases.iter().all(|base| taken(dir, base)) {
         let (given, _) = given(dir, name, &kept.bases, seen)?;
-        let mut ids = kept.ids;
+        let mut ids = minus(&kept.ids, &kept.drops);
         merge(&mut ids, &minus(&given, &kept.drops));
         return Ok((ids, kept.drops));
     }
@@ -286,6 +296,40 @@ pub fn merge(into: &mut Vec<String>, from: &[String]) {
     }
 }
 
+/// `now`, with each mod of `before` that `off` names put back after the nearest mod before it
+/// that `now` did not move.
+pub fn with_spots(before: &[String], now: &[String], off: impl Fn(&str) -> bool) -> Vec<String> {
+    let at: HashMap<&str, usize> = now.iter().map(String::as_str).zip(0..).collect();
+    let kept: Vec<&str> = before
+        .iter()
+        .map(String::as_str)
+        .filter(|id| at.contains_key(id))
+        .collect();
+    let places: Vec<usize> = kept.iter().map(|id| at[id]).collect();
+    let moved = crate::base::unmoved::moved(&places);
+    let still: HashSet<&str> = kept
+        .iter()
+        .zip(moved)
+        .filter(|(_, m)| !m)
+        .map(|(id, _)| *id)
+        .collect();
+    let mut put: Vec<Vec<String>> = vec![Vec::new(); now.len() + 1];
+    let mut after = 0;
+    for id in before {
+        if still.contains(id.as_str()) {
+            after = at[id.as_str()] + 1;
+        } else if !at.contains_key(id.as_str()) && off(id) {
+            put[after].push(id.clone());
+        }
+    }
+    let mut full = Vec::new();
+    for (i, gone) in put.into_iter().enumerate() {
+        full.extend(gone);
+        full.extend(now.get(i).cloned());
+    }
+    full
+}
+
 /// The lists built on `name` keep the mods it gave them, and build on what it built on.
 pub fn delete(dir: &Path, name: &str) -> Result<(), Error> {
     let found = all(dir);
@@ -314,6 +358,35 @@ pub fn take_out(dir: &Path, name: &str, id: &str) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn with_spots_puts_turned_off_mods_back() {
+        let off = |id: &str| id == "x";
+        assert_eq!(
+            with_spots(&ids(&["a", "b", "x", "c"]), &ids(&["a", "b", "c"]), off),
+            ids(&["a", "b", "x", "c"])
+        );
+        assert_eq!(
+            with_spots(
+                &ids(&["a", "b", "x", "c", "d", "e"]),
+                &ids(&["a", "c", "d", "e", "b"]),
+                off
+            ),
+            ids(&["a", "x", "c", "d", "e", "b"])
+        );
+    }
+
+    #[test]
+    fn saving_keeps_the_spot_of_a_turned_off_mod() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        save(dir, "base", &ids(&["a", "b", "c"])).unwrap();
+        save(dir, "top", &ids(&["a", "b", "c"])).unwrap();
+        build_on(dir, "top", &ids(&["base"]), &[]).unwrap();
+        save(dir, "top", &ids(&["a", "c"])).unwrap();
+        assert_eq!(order(dir, "top"), ids(&["a", "b", "c"]));
+        assert_eq!(load(dir, "top").unwrap(), ids(&["a", "c"]));
+    }
 
     #[test]
     fn lists_are_counted_by_their_files() {

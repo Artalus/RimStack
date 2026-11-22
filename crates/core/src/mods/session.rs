@@ -110,7 +110,7 @@ impl Session {
             .partition(|id| before.contains_key(id));
         let deactivated = self.saved.iter().map(String::as_str);
         let places: Vec<usize> = kept.iter().map(|id| before[id]).collect();
-        let moved = kept.iter().zip(crate::mods::sort::moved(&places));
+        let moved = kept.iter().zip(crate::base::unmoved::moved(&places));
         let moved = moved.filter(|(_, moved)| *moved);
         Changes {
             moved: moved.map(|(id, _)| *id).collect(),

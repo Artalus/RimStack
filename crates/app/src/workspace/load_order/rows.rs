@@ -311,20 +311,20 @@ impl LoadOrder {
     /// Mods a list under the one in use gives that the load order lacks: crossed out, not in it.
     fn crossed_rows(
         &self,
-        crossed: Option<&Vec<(&str, &str)>>,
+        crossed: Option<&Vec<(String, String)>>,
         in_use: &str,
         around: &Around,
         nth: &mut impl FnMut(RowKey) -> usize,
     ) -> Vec<RowView> {
         let inactive = self.inactive.mods();
-        let row = |&(id, list): &(&str, &str)| {
-            let index = inactive.iter().position(|m| key(&m.id) == id)?;
+        let row = |(id, list): &(String, String)| {
+            let index = inactive.iter().position(|m| key(&m.id) == *id)?;
             let mut view = self.mod_row(Side::Inactive, index, &inactive[index], around, nth);
             view.number = 0;
-            view.from = list.to_string();
+            view.from = list.clone();
             view.crossed = say!(
                 "Comes from {}, deactivated in {}",
-                list.to_string(),
+                list.clone(),
                 in_use.to_string()
             );
             Some(view)

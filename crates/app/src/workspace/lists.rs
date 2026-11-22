@@ -20,8 +20,8 @@ const CORE: &str = "ludeon.rimworld";
 #[derive(Default, PartialEq)]
 pub struct Stacks {
     pub in_use: String,
-    /// Folded ids: the list in use's mods in its order, with those the lists under it give merged in;
-    /// where a crossed-out mod stays.
+    /// Folded ids: the list in use's whole order, the mods it turns off included, with those the
+    /// lists under it give merged in.
     order: Vec<String>,
     /// The list under the one in use that a mod comes from, by folded id.
     underneath: HashMap<String, String>,
@@ -41,18 +41,19 @@ impl Stacks {
     }
 
     /// The mods of `underneath` the load order lacks, each with its list, by the folded id of the
-    /// active mod each follows in `order`; "" before the first.
-    pub fn crossed(&self, active: &[Mod]) -> HashMap<&str, Vec<(&str, &str)>> {
-        let on: HashSet<String> = active.iter().map(|m| key(&m.id)).collect();
-        let (mut crossed, mut after) = (HashMap::new(), "");
-        for id in &self.order {
-            if on.contains(id) {
-                after = id;
-            } else if let Some(list) = self.underneath.get(id) {
-                crossed
-                    .entry(after)
+    /// active mod each follows; "" before the first. Each keeps its spot in `order`.
+    pub fn crossed(&self, active: &[Mod]) -> HashMap<String, Vec<(String, String)>> {
+        let on: Vec<String> = active.iter().map(|m| key(&m.id)).collect();
+        let full = lists::with_spots(&self.order, &on, |id| self.underneath.contains_key(id));
+        let on: HashSet<String> = on.into_iter().collect();
+        let (mut crossed, mut after) = (HashMap::new(), String::new());
+        for id in full {
+            match self.underneath.get(&id).filter(|_| !on.contains(&id)) {
+                Some(list) => crossed
+                    .entry(after.clone())
                     .or_insert_with(Vec::new)
-                    .push((id.as_str(), list.as_str()));
+                    .push((id, list.clone())),
+                None => after = id,
             }
         }
         crossed
@@ -295,10 +296,7 @@ impl App {
             }
         }
         let below = lists::underneath(&dir, name);
-        let in_use = saved.iter().filter(|l| l.name == name);
-        let mut order: Vec<String> = in_use
-            .flat_map(|l| l.mods.iter().map(|id| key(id)))
-            .collect();
+        let mut order: Vec<String> = lists::order(&dir, name).iter().map(|id| key(id)).collect();
         lists::merge(
             &mut order,
             &below.iter().map(|(id, _)| key(id)).collect::<Vec<_>>(),

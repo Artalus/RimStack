@@ -18,6 +18,7 @@ pub mod sizes;
 pub mod stamp;
 pub mod thumbnail;
 pub mod translate;
+pub mod unmoved;
 pub mod vdf;
 pub mod versions;
 pub mod waits;
