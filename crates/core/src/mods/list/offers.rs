@@ -68,6 +68,9 @@ const TERMS: &[(&str, About)] = &[
     ("in:search", |_| {
         say!("has matches in the last search of Find")
     }),
+    ("in:list", |_| {
+        say!("active, and not from the lists the saved list in use builds on")
+    }),
     ("has:code", |_| say!("ships compiled code")),
     ("has:defs", |_| say!("has XML defs")),
     ("has:patches", |_| say!("has XML patches")),

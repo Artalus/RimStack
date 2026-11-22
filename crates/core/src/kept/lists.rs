@@ -1,6 +1,7 @@
 use crate::base::error::Error;
 use crate::said;
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
@@ -165,6 +166,32 @@ pub fn taken(dir: &Path, name: &str) -> bool {
 
 pub fn load(dir: &Path, name: &str) -> Result<Vec<String>, Error> {
     resolve(dir, name, &mut Vec::new()).map(|(ids, _)| ids)
+}
+
+/// The mods `name` gives from the lists under it, each with the lowest list in the stack that gives it.
+pub fn underneath(dir: &Path, name: &str) -> Vec<(String, String)> {
+    sources(dir, name)
+        .into_iter()
+        .filter(|(_, list)| list != name)
+        .collect()
+}
+
+/// Each mod `name` gives, with the lowest list in its stack that gives it.
+fn sources(dir: &Path, name: &str) -> Vec<(String, String)> {
+    // A list that loads has no loop below it, so recursing ends.
+    let (Ok(ids), Some(kept)) = (load(dir, name), read(&file_for(dir, name))) else {
+        return Vec::new();
+    };
+    let mut below = HashMap::new();
+    for (id, list) in kept.bases.iter().flat_map(|base| sources(dir, base)) {
+        below.entry(id).or_insert(list);
+    }
+    ids.into_iter()
+        .map(|id| {
+            let list = below.remove(&id).unwrap_or_else(|| name.to_string());
+            (id, list)
+        })
+        .collect()
 }
 
 /// Its mods in its own order, and the mods turned off in it or under it.
@@ -378,6 +405,15 @@ mod tests {
         assert_eq!(load(dir, "qol").unwrap(), ids(&qol));
         let medieval = ["core", "a", "x", "c", "d", "g", "h", "i", "f"];
         assert_eq!(load(dir, "medieval").unwrap(), ids(&medieval));
+        assert!(underneath(dir, "base").is_empty());
+        let from = |list: &str, mods: &[&str]| -> Vec<(String, String)> {
+            mods.iter()
+                .map(|m| (m.to_string(), list.to_string()))
+                .collect()
+        };
+        let mut under = from("base", &["core", "a", "x", "c"]);
+        under.extend(from("qol", &["d", "f"]));
+        assert_eq!(underneath(dir, "medieval"), under);
         save(dir, "base", &ids(&["core"])).unwrap();
         let medieval = all(dir).into_iter().find(|s| s.name == "medieval").unwrap();
         assert_eq!((medieval.mods, medieval.adds, medieval.drops), (6, 3, 1));

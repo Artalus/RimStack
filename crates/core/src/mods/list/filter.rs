@@ -76,6 +76,7 @@ impl Filter {
             Some(("is", "new")) => self.flags |= flag::NEW,
             Some(("is", "changed")) => self.flags |= flag::CHANGED,
             Some(("in", "search")) => self.flags |= flag::IN_SEARCH,
+            Some(("in", "list")) => self.flags |= flag::IN_LIST,
             _ => self.words.push(term.to_string()),
         }
     }

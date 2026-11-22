@@ -68,7 +68,6 @@ const FACTS_QUIET: std::time::Duration = std::time::Duration::from_millis(150);
 
 const ROWS_UNTOUCHED: Changes = Changes::LOGS
     .or(Changes::SAVES)
-    .or(Changes::LISTS)
     .or(Changes::THEME)
     .or(Changes::DOWNLOAD_LIST)
     .or(Changes::KEY)
@@ -305,13 +304,18 @@ impl Mods {
             if changes.contains(Changes::SETTINGS) {
                 order.follow_left_out(&app);
             }
+            if changes.contains(Changes::LISTS) {
+                order.lists_read(&app);
+            }
             if changes.contains(Changes::PROBLEMS | Changes::COMMUNITY) {
                 order.recheck(&app);
             }
             if changes.contains(Changes::COMMUNITY | Changes::FILES_READ) {
                 order.refile(&app);
             }
-            if changes.contains(Changes::UPDATES | Changes::LAUNCHES | Changes::FIND) {
+            if changes
+                .contains(Changes::UPDATES | Changes::LAUNCHES | Changes::FIND | Changes::LISTS)
+            {
                 order.settle(&app);
             }
             if changes.contains(Changes::FACTS) {
@@ -447,6 +451,7 @@ impl Mods {
         );
         let active_by = self.list.read(cx).order.order_of(Side::Active);
         self.edit_list(cx, |list, _| list.rescanning = true);
+        let stacks = app.stacks();
         self.loading.run(
             "load order",
             cx,
@@ -456,6 +461,12 @@ impl Mods {
                 order
             },
             move |mods, mut order, cx| {
+                // The saved lists may have been read meanwhile, with no mods yet to give them to.
+                let app = super::app(cx);
+                if !std::sync::Arc::ptr_eq(&stacks, &app.stacks()) {
+                    order.lists_read(&app);
+                    order.settle(&app);
+                }
                 let text = mods.filter_text(cx);
                 order.set_filter(&text);
                 mods.edit_list(cx, |list, _| {

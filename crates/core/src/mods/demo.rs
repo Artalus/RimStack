@@ -61,6 +61,7 @@ pub fn generate(count: usize) -> Vec<Mod> {
                 size: None,
                 downloaded: None,
                 activated: None,
+                from: String::new(),
                 filed: category,
                 chosen: false,
                 held_by: String::new(),

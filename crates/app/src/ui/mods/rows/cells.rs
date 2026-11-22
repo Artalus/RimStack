@@ -211,14 +211,43 @@ pub(super) fn cells(theme: &Theme, row: &RowView, fitted: Fitted, shown: Shown<'
                 theme.sized(13.),
                 if chosen { c.on_selected } else { colour },
             );
-            match pointed {
-                true => d.child(tipped_label(
+            let shown = match pointed {
+                true => tipped_label(
                     format!("category-{}", row.number),
                     div().child(shown),
                     category_name(row.category),
-                )),
-                false => d.child(shown),
+                )
+                .into_any_element(),
+                false => shown.into_any_element(),
+            };
+            if row.from.is_empty() {
+                return d.child(shown);
             }
+            let under = div().child(icon(
+                "layers",
+                theme.sized(10.),
+                if chosen { c.on_selected } else { c.ink3 },
+            ));
+            d.child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .gap(theme::GAP_LINE)
+                    .child(shown)
+                    .child(match pointed {
+                        true => tipped_label(
+                            format!("underneath-{}", row.number),
+                            under,
+                            put(&say!(
+                                "This mod comes from a previous list in the stack: {}",
+                                row.from.clone()
+                            )),
+                        )
+                        .into_any_element(),
+                        false => under.into_any_element(),
+                    }),
+            )
         })
         .when(columns.is_some_and(|c| c.tile), |d| {
             d.child(tile(theme, row, colour, picture))
@@ -323,6 +352,7 @@ pub(super) fn cells(theme: &Theme, row: &RowView, fitted: Fitted, shown: Shown<'
             "updated" => put(&row.updated_ago).into(),
             "downloaded" => put(&row.downloaded_ago).into(),
             "activated" => put(&row.activated_ago).into(),
+            "list" => row.from.clone().into(),
             _ => put(&row.size_text).into(),
         }
     };

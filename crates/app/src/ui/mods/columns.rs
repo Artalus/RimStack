@@ -139,7 +139,7 @@ pub(super) fn edge(
     )
 }
 
-const ALL: [&str; 7] = [
+const ALL: [&str; 8] = [
     "author",
     "version",
     "load",
@@ -147,12 +147,13 @@ const ALL: [&str; 7] = [
     "downloaded",
     "activated",
     "size",
+    "list",
 ];
 
-/// The columns a list may show: an inactive mod has no load time nor date it was activated.
+/// The columns a list may show: an inactive mod has no load time, date it was activated nor list.
 fn offered(side: Side) -> impl Iterator<Item = &'static str> {
     ALL.into_iter()
-        .filter(move |key| side == Side::Active || !matches!(*key, "load" | "activated"))
+        .filter(move |key| side == Side::Active || !matches!(*key, "load" | "activated" | "list"))
 }
 
 /// The columns chosen for a list, in their order; Load only once the game's log timed the mods.
@@ -173,6 +174,7 @@ pub(super) fn column_name(key: &str) -> Sentence {
         "updated" => say!("Updated"),
         "downloaded" => say!("Downloaded"),
         "activated" => say!("Activated"),
+        "list" => say!("List"),
         _ => say!("Size"),
     }
 }
@@ -215,7 +217,7 @@ pub(super) fn columns(
         measure(window, theme, &text, size, FontWeight::NORMAL)
     };
     let natural = |key: &str| match key {
-        "author" | "version" => heading(key).max(widest(key, theme.body())),
+        "author" | "version" | "list" => heading(key).max(widest(key, theme.body())),
         "load" => heading(key).max(widest(key, theme.small())),
         "size" => heading(key).max(measure(
             window,

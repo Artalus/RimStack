@@ -80,6 +80,13 @@ fn date(mods: &mut [Mod], since: &activated::Since) {
     }
 }
 
+/// What the saved lists say of each mod, by folded id.
+fn held(mods: &mut [Mod], stacks: &crate::workspace::lists::Stacks) {
+    for m in mods {
+        m.from = stacks.comes_from(&m.id).cloned().unwrap_or_default();
+    }
+}
+
 fn arranged(app: &App, library: &Library) -> rimstack_core::mods::library::Arranged {
     let mut now = library.arrange(app.session().current());
     let measured = app.startup();
@@ -90,6 +97,9 @@ fn arranged(app: &App, library: &Library) -> rimstack_core::mods::library::Arran
     let notes = app.notes().reading();
     let steam_record = app.steam_record();
     let (times, sizes) = (&steam_record.times, &steam_record.sizes);
+    let stacks = app.stacks();
+    held(&mut now.active, &stacks);
+    held(&mut now.inactive, &stacks);
     for m in now.active.iter_mut().chain(now.inactive.iter_mut()) {
         let installed = m.installed.and_then(|i| library.get(i));
         if let Some(i) = installed.filter(|i| i.source == Source::Workshop) {
@@ -344,6 +354,16 @@ impl LoadOrder {
         offers::offers(typed, text, counted, mods)
     }
 
+    /// The saved lists were read again.
+    pub fn lists_read(&mut self, app: &App) {
+        let stacks = app.stacks();
+        for side in [Side::Active, Side::Inactive] {
+            let mut mods = self.list(side).mods().to_vec();
+            held(&mut mods, &stacks);
+            self.list_mut(side).set_mods(mods);
+        }
+    }
+
     pub fn recheck(&mut self, app: &App) {
         self.checked_order = Vec::new();
         self.checked_inactive = Vec::new();
@@ -505,6 +525,7 @@ impl LoadOrder {
                     m.installed.is_some_and(|i| found.contains(&i)),
                     flag::IN_SEARCH,
                 ),
+                (side == Side::Active && m.from.is_empty(), flag::IN_LIST),
             ];
             marks
                 .iter()

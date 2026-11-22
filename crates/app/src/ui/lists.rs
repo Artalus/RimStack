@@ -88,6 +88,7 @@ impl Lists {
             "lists",
             cx,
             move |_| {
+                app.keep_stacks(&name);
                 let kept = (!name.is_empty())
                     .then(|| app.list_named(&name).ok())
                     .flatten();

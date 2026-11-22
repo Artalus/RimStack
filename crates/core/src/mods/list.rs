@@ -110,6 +110,8 @@ pub struct Mod {
     pub downloaded: Option<u64>,
     /// Since when it has been in the saved load order.
     pub activated: Option<u64>,
+    /// The list under the saved list in use that gives it; empty for that list's own mods.
+    pub from: String,
     /// Its own category, chosen or worked out; `category` is where it sits, which a rule can
     /// make an earlier one. A sort starts from this.
     pub filed: Category,
@@ -131,10 +133,11 @@ pub enum SortKey {
     Activated,
     Size,
     Load,
+    List,
 }
 
 impl SortKey {
-    pub const ALL: [SortKey; 10] = [
+    pub const ALL: [SortKey; 11] = [
         SortKey::Group,
         SortKey::Name,
         SortKey::Author,
@@ -145,6 +148,7 @@ impl SortKey {
         SortKey::Activated,
         SortKey::Size,
         SortKey::Load,
+        SortKey::List,
     ];
 
     /// Kept in the settings and handed to the window: never reworded.
@@ -160,6 +164,7 @@ impl SortKey {
             SortKey::Activated => "activated",
             SortKey::Size => "size",
             SortKey::Load => "load",
+            SortKey::List => "list",
         }
     }
 
@@ -209,6 +214,7 @@ fn sort_value(m: &Mod, key: SortKey) -> Option<SortValue> {
         SortKey::Activated => m.activated.map(SortValue::Number),
         SortKey::Size => m.size.map(SortValue::Number),
         SortKey::Load => m.load_micros.map(|micros| SortValue::Number(micros.into())),
+        SortKey::List => text(&m.from),
     }
 }
 
@@ -310,6 +316,7 @@ pub mod flag {
     pub const NEW: u16 = 128;
     pub const CHANGED: u16 = 256;
     pub const IN_SEARCH: u16 = 512;
+    pub const IN_LIST: u16 = 1024;
 }
 
 impl GroupedList {

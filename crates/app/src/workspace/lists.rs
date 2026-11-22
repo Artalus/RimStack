@@ -1,6 +1,7 @@
 use super::App;
 use crate::changes::Changes;
 use rimstack_core::base::error::Error;
+use rimstack_core::base::locks::Held;
 use rimstack_core::base::sentence::Sentence;
 use rimstack_core::kept::{journal, lists};
 use rimstack_core::mods::library::ModId;
@@ -9,8 +10,28 @@ use rimstack_core::rimworld::modsconfig;
 use rimstack_core::say;
 use rimstack_core::sources::rentry;
 use serde::Serialize;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 const CORE: &str = "ludeon.rimworld";
+
+/// What the saved lists say about the load order; kept off the window's thread.
+#[derive(Default, PartialEq)]
+pub struct Stacks {
+    /// The list under the one in use that a mod comes from.
+    underneath: HashMap<String, String>,
+}
+
+impl Stacks {
+    pub fn comes_from(&self, id: &str) -> Option<&String> {
+        self.underneath.get(&key(id))
+    }
+}
+
+/// A list may hold a Workshop copy as `x_steam`, which the game writes while a local `x` is installed too.
+fn key(id: &str) -> String {
+    rimstack_core::rimworld::id::split_steam(id).0
+}
 
 const SNAPSHOTS_SHOWN: usize = 5;
 
@@ -219,6 +240,27 @@ impl App {
         let mut ids = current.clone();
         lists::merge(&mut ids, &lists::load(&self.lists_dir(), name)?);
         Ok((ids != current).then_some(ids))
+    }
+
+    /// Reads files: off the window's thread.
+    pub fn keep_stacks(&self, name: &str) {
+        let dir = self.lists_dir();
+        let found = Stacks {
+            underneath: lists::underneath(&dir, name)
+                .into_iter()
+                .map(|(id, list)| (key(&id), list))
+                .collect(),
+        };
+        let mut kept = self.stacks.held();
+        if **kept != found {
+            *kept = Arc::new(found);
+            drop(kept);
+            self.publish(Changes::LISTS);
+        }
+    }
+
+    pub fn stacks(&self) -> Arc<Stacks> {
+        self.stacks.held().clone()
     }
 
     pub fn list_named(&self, name: &str) -> Result<Vec<String>, Error> {

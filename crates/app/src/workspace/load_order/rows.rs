@@ -87,6 +87,8 @@ pub struct RowView {
     /// In seconds; 0 when not measured.
     pub load_seconds: f64,
     pub version_line: Sentence,
+    /// `Mod::from`, in the load order only: a row with one is dimmed.
+    pub from: String,
 }
 
 impl RowView {
@@ -133,6 +135,7 @@ impl RowView {
             accessible_name: Sentence::Plain(name.to_string()),
             load_seconds: 0.0,
             version_line: Sentence::default(),
+            from: String::new(),
         }
     }
 }
@@ -195,6 +198,7 @@ impl LoadOrder {
             SortKey::PackageId => plain(&m.id),
             SortKey::Author => plain(&m.author),
             SortKey::Version => plain(&m.version),
+            SortKey::List => plain(&m.from),
             SortKey::Group | SortKey::Name | SortKey::Load => Sentence::default(),
         }
     }
@@ -380,6 +384,10 @@ impl LoadOrder {
             accessible_name,
             load_seconds: took.map_or(0.0, |micros| f64::from(micros) / 1_000_000.0),
             version_line,
+            from: match side {
+                Side::Active => m.from.clone(),
+                Side::Inactive => String::new(),
+            },
         }
     }
 }

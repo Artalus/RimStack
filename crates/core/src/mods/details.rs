@@ -220,6 +220,7 @@ mod tests {
             size: None,
             downloaded: None,
             activated: None,
+            from: String::new(),
             filed: Category::Content,
             chosen: false,
             held_by: String::new(),

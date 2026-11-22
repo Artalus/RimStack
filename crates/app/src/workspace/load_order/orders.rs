@@ -75,6 +75,7 @@ fn label(key: Option<SortKey>, side: Side) -> Sentence {
         Some(SortKey::Activated) => say!("Activated"),
         Some(SortKey::Size) => say!("Size"),
         Some(SortKey::Load) => say!("Load"),
+        Some(SortKey::List) => say!("List"),
     }
 }
 
@@ -115,7 +116,12 @@ impl LoadOrder {
             .filter(|k| *k != SortKey::Load || timed)
             .collect();
         let inactive_keys: Vec<SortKey> = keys
-            .filter(|k| !matches!(k, SortKey::Group | SortKey::Activated | SortKey::Load))
+            .filter(|k| {
+                !matches!(
+                    k,
+                    SortKey::Group | SortKey::Activated | SortKey::Load | SortKey::List
+                )
+            })
             .collect();
         let active = entries(self.order_of(Side::Active), Side::Active, &active_keys);
         let inactive = entries(
@@ -155,6 +161,10 @@ impl LoadOrder {
             (
                 "version",
                 widest(mods.iter().map(|m| m.version.clone()).collect()),
+            ),
+            (
+                "list",
+                widest(mods.iter().map(|m| m.from.clone()).collect()),
             ),
             (
                 "load",

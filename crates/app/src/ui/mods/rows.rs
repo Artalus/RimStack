@@ -330,6 +330,7 @@ pub fn row(
             at,
         ))
         .group("mod-row")
+        .when(!row.from.is_empty(), |d| d.opacity(0.5))
         .role(match is_header {
             true => gpui::Role::Heading,
             false => gpui::Role::ListItem,

@@ -157,6 +157,8 @@ pub struct App {
     git: OnceLock<Option<String>>,
     log_read: Mutex<Option<rimstack_core::kept::launches::LogRead>>,
     find: find::Find,
+    /// Folded ids of the mods the lists under the saved list in use give, each with its list.
+    stacks: Mutex<Arc<lists::Stacks>>,
     rescans: crate::jobs::Single<()>,
     log_keeping: crate::jobs::Single<()>,
     /// Snapshots named and not yet written.
@@ -248,6 +250,7 @@ impl App {
             git: OnceLock::new(),
             log_read: Mutex::new(None),
             find: find::Find::default(),
+            stacks: Mutex::new(Arc::default()),
             rescans: crate::jobs::Single::default(),
             log_keeping: crate::jobs::Single::default(),
             snapshots_named: Arc::default(),
