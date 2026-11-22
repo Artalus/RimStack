@@ -1303,6 +1303,7 @@
  "has textures": "텍스처가 있음",
  "has this tag": "이 태그가 있음",
  "has translations": "번역이 있음",
+ "in any of these saved lists, by name, with commas between, or * for any": "이름으로 지정한 저장된 목록 중 하나에 있음, 쉼표로 구분, 아무 목록이나 *",
  "in the game's Mods folder": "게임의 Mods 폴더에 있음",
  "inactive": "비활성",
  "installed": "설치됨",

@@ -71,6 +71,9 @@ const TERMS: &[(&str, About)] = &[
     ("in:list", |_| {
         say!("active, and not from the lists the saved list in use builds on")
     }),
+    ("in:lists:", |_| {
+        say!("in any of these saved lists, by name, with commas between, or * for any")
+    }),
     ("has:code", |_| say!("ships compiled code")),
     ("has:defs", |_| say!("has XML defs")),
     ("has:patches", |_| say!("has XML patches")),

@@ -83,6 +83,7 @@ fn date(mods: &mut [Mod], since: &activated::Since) {
 /// What the saved lists say of each mod, by folded id.
 fn held(mods: &mut [Mod], stacks: &crate::workspace::lists::Stacks) {
     for m in mods {
+        m.lists = stacks.holding(&m.id).to_vec();
         m.from = stacks.comes_from(&m.id).cloned().unwrap_or_default();
     }
 }

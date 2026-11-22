@@ -110,6 +110,8 @@ pub struct Mod {
     pub downloaded: Option<u64>,
     /// Since when it has been in the saved load order.
     pub activated: Option<u64>,
+    /// The saved lists that give it, in lower case.
+    pub lists: Vec<String>,
     /// The list under the saved list in use that gives it; empty for that list's own mods.
     pub from: String,
     /// Its own category, chosen or worked out; `category` is where it sits, which a rule can

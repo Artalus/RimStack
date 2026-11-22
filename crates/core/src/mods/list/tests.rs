@@ -20,6 +20,7 @@ pub(super) fn m(name: &str, author: &str, category: Category) -> Mod {
         size: None,
         downloaded: None,
         activated: None,
+        lists: Vec::new(),
         from: String::new(),
         filed: category,
         chosen: false,

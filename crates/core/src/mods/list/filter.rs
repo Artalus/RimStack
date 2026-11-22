@@ -13,6 +13,7 @@ pub(super) struct Filter {
     authors: Vec<String>,
     tags: Vec<String>,
     versions: Vec<String>,
+    lists: Vec<Vec<String>>,
     local: bool,
     workshop: bool,
     git: bool,
@@ -77,6 +78,16 @@ impl Filter {
             Some(("is", "changed")) => self.flags |= flag::CHANGED,
             Some(("in", "search")) => self.flags |= flag::IN_SEARCH,
             Some(("in", "list")) => self.flags |= flag::IN_LIST,
+            Some(("in", rest)) if rest.starts_with("lists:") => {
+                let names: Vec<String> = rest["lists:".len()..]
+                    .split(',')
+                    .filter(|n| !n.is_empty())
+                    .map(str::to_string)
+                    .collect();
+                if !names.is_empty() {
+                    self.lists.push(names);
+                }
+            }
             _ => self.words.push(term.to_string()),
         }
     }
@@ -141,6 +152,10 @@ impl Filter {
                 .versions
                 .iter()
                 .all(|v| m.latest_game.starts_with(v.as_str()))
+            && self.lists.iter().all(|any| {
+                any.iter()
+                    .any(|n| m.lists.contains(n) || n == "*" && !m.lists.is_empty())
+            })
             && (!self.local || m.local)
             && (!self.workshop || m.workshop)
             && (!self.git || m.git)
@@ -166,6 +181,27 @@ mod tests {
             _ => None,
         };
         list.rows().iter().filter_map(name).collect()
+    }
+
+    #[test]
+    fn in_lists_asks_for_mods_in_any_of_the_saved_lists_named() {
+        let mut mods = sample().mods().to_vec();
+        mods[1].lists = vec!["a".into()];
+        mods[2].lists = vec!["a".into(), "b".into()];
+        mods[3].lists = vec!["c".into()];
+        let mut list = GroupedList::flat(mods);
+        list.set_filter("in:lists:A,b");
+        assert_eq!(names(&list), ["Core", "Royalty"]);
+        list.set_filter("in:lists:b in:lists:a");
+        assert_eq!(names(&list), ["Royalty"]);
+        list.set_filter("!in:lists:a");
+        assert_eq!(names(&list).len(), 4);
+        list.set_filter("in:lists:*");
+        assert_eq!(names(&list).len(), 3);
+        list.set_filter("!in:lists:*");
+        assert_eq!(names(&list).len(), 3);
+        list.set_filter("in:lists:,");
+        assert_eq!(names(&list).len(), 6);
     }
 
     #[test]

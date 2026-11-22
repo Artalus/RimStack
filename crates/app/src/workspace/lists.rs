@@ -22,11 +22,17 @@ pub struct Stacks {
     underneath: HashMap<String, String>,
     /// The lists built on the one in use.
     pub used_by: Vec<String>,
+    /// Every saved list that gives a mod, in lower case.
+    holding: HashMap<String, Vec<String>>,
 }
 
 impl Stacks {
     pub fn comes_from(&self, id: &str) -> Option<&String> {
         self.underneath.get(&key(id))
+    }
+
+    pub fn holding(&self, id: &str) -> &[String] {
+        self.holding.get(&key(id)).map_or(&[], Vec::as_slice)
     }
 }
 
@@ -247,12 +253,23 @@ impl App {
     /// Reads files: off the window's thread.
     pub fn keep_stacks(&self, name: &str) {
         let dir = self.lists_dir();
+        let mut holding: HashMap<String, Vec<String>> = HashMap::new();
+        let saved = lists::all(&dir);
+        for l in &saved {
+            for id in lists::load(&dir, &l.name).unwrap_or_default() {
+                holding
+                    .entry(key(&id))
+                    .or_default()
+                    .push(l.name.to_lowercase());
+            }
+        }
         let found = Stacks {
             underneath: lists::underneath(&dir, name)
                 .into_iter()
                 .map(|(id, list)| (key(&id), list))
                 .collect(),
-            used_by: lists::all(&dir)
+            holding,
+            used_by: saved
                 .into_iter()
                 .filter(|l| !name.is_empty() && l.under.iter().any(|u| u == name))
                 .map(|l| l.name)

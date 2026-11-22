@@ -220,6 +220,7 @@ mod tests {
             size: None,
             downloaded: None,
             activated: None,
+            lists: Vec::new(),
             from: String::new(),
             filed: Category::Content,
             chosen: false,
