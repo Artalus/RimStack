@@ -20,6 +20,8 @@ const CORE: &str = "ludeon.rimworld";
 pub struct Stacks {
     /// The list under the one in use that a mod comes from.
     underneath: HashMap<String, String>,
+    /// The lists built on the one in use.
+    pub used_by: Vec<String>,
 }
 
 impl Stacks {
@@ -249,6 +251,11 @@ impl App {
             underneath: lists::underneath(&dir, name)
                 .into_iter()
                 .map(|(id, list)| (key(&id), list))
+                .collect(),
+            used_by: lists::all(&dir)
+                .into_iter()
+                .filter(|l| !name.is_empty() && l.under.iter().any(|u| u == name))
+                .map(|l| l.name)
                 .collect(),
         };
         let mut kept = self.stacks.held();

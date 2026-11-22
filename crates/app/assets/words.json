@@ -512,6 +512,7 @@
  "Lime": "",
  "Links": "",
  "List": "",
+ "List \"{}\" is used by other lists: {}": "",
  "List from before RimStack": "",
  "List not updated: {}": "",
  "List: {}": "",

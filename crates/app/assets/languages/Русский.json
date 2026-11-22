@@ -562,6 +562,7 @@
  "Lime": "Лаймовый",
  "Links": "Ссылки",
  "List": "Список",
+ "List \"{}\" is used by other lists: {}": "Список «{}» используют другие списки: {}",
  "List from before RimStack": "Список до RimStack",
  "List: {}": "Список: {}",
  "Lists": "Списки",

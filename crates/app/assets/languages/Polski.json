@@ -561,6 +561,7 @@
  "Lime": "Limonkowy",
  "Links": "Linki",
  "List": "Lista",
+ "List \"{}\" is used by other lists: {}": "Lista „{}” jest używana przez inne listy: {}",
  "List from before RimStack": "Lista sprzed RimStack",
  "List: {}": "Lista: {}",
  "Lists": "Listy",

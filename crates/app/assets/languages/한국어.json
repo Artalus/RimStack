@@ -548,6 +548,7 @@
  "Lime": "연두색",
  "Links": "링크",
  "List": "목록",
+ "List \"{}\" is used by other lists: {}": "목록 “{}”을(를) 다른 목록이 사용합니다: {}",
  "List from before RimStack": "RimStack 사용 전 목록",
  "List: {}": "목록: {}",
  "Lists": "목록",

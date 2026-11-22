@@ -246,6 +246,19 @@ impl DetailsView {
                 )),
             ));
         }
+        let around = crate::ui::around::read(cx);
+        if around.list_changed {
+            let used_by = crate::ui::app(cx).stacks().used_by.join(", ");
+            if !used_by.is_empty() {
+                let name = around.list_name.clone();
+                let said = put(&say!(
+                    "List \"{}\" is used by other lists: {}",
+                    name,
+                    used_by
+                ));
+                body.push(line(theme, "used-by", said, None));
+            }
+        }
         if errors == 0 && !dirty && !troubled {
             body.push(line(
                 theme,

@@ -69,14 +69,30 @@ impl Mods {
                 .pb(theme::GAP)
                 .child(notice(tone))
         };
-        let changed = |tone, said: String, buttons: Vec<AnyElement>| {
+        let used_by = crate::ui::app(cx).stacks().used_by.join(", ");
+        let used_by = (!used_by.is_empty()).then(|| {
+            put(&say!(
+                "List \"{}\" is used by other lists: {}",
+                around.list_name.clone(),
+                used_by
+            ))
+        });
+        let line = |text: String, colour| {
+            div()
+                .overflow_hidden()
+                .whitespace_nowrap()
+                .text_ellipsis()
+                .text_color(colour)
+                .child(text)
+        };
+        let changed = |tone, said: String, note: Option<String>, buttons: Vec<AnyElement>| {
             band(tone)
                 .child(
                     div()
                         .flex()
                         .items_center()
                         .gap(theme::GAP)
-                        .h(theme.sized(34.))
+                        .min_h(theme.sized(34.))
                         .pl(theme::GAP_LARGE)
                         .pr(theme::GAP_TINY)
                         .child(div().flex_none().size(px(7.)).rounded(px(3.5)).bg(tone))
@@ -84,12 +100,9 @@ impl Mods {
                             div()
                                 .flex_1()
                                 .min_w_0()
-                                .overflow_hidden()
-                                .whitespace_nowrap()
-                                .text_ellipsis()
                                 .sized_text(theme, theme.body())
-                                .text_color(c.ink)
-                                .child(said),
+                                .child(line(said, c.ink))
+                                .when_some(note, |d, note| d.child(line(note, c.ink2))),
                         )
                         .children(buttons),
                 )
@@ -107,6 +120,7 @@ impl Mods {
             shown.push(changed(
                 c.warn,
                 put(&say!("List not updated: {}", around.list_name.clone())),
+                used_by,
                 vec![update.into_any_element()],
             ));
         }
@@ -124,6 +138,7 @@ impl Mods {
             shown.push(changed(
                 c.accent,
                 put(&say!("Not deployed: {}", unsaved)),
+                None,
                 vec![show.into_any_element(), discard.into_any_element()],
             ));
         }
