@@ -2,6 +2,7 @@
 
 use super::{LoadOrder, Side, side_index};
 use crate::App;
+use crate::workspace::lists::key;
 use rimstack_core::base::sentence::Sentence;
 use rimstack_core::base::{elapsed, sizes};
 use rimstack_core::mods::describe::{Fix, Trouble};
@@ -89,6 +90,8 @@ pub struct RowView {
     pub version_line: Sentence,
     /// `Mod::from`, in the load order only: a row with one is dimmed.
     pub from: String,
+    /// Why a mod a list underneath gives is crossed out, not in the load order; empty for others.
+    pub crossed: Sentence,
 }
 
 impl RowView {
@@ -136,6 +139,7 @@ impl RowView {
             load_seconds: 0.0,
             version_line: Sentence::default(),
             from: String::new(),
+            crossed: Sentence::default(),
         }
     }
 }
@@ -240,7 +244,8 @@ impl LoadOrder {
             *count - 1
         };
         let mut categories_shown: Vec<Category> = Vec::new();
-        list.rows()
+        let views: Vec<RowView> = list
+            .rows()
             .iter()
             .map(|row| match *row {
                 Row::Header {
@@ -280,7 +285,51 @@ impl LoadOrder {
                 }
                 Row::Mod { index } => self.mod_row(side, index, &mods[index], &around, &mut nth),
             })
-            .collect()
+            .collect();
+        if side == Side::Inactive || self.order_of(side).is_some() || list.filtered() {
+            return views;
+        }
+        let stacks = app.stacks();
+        let crossed = stacks.crossed(mods);
+        let mut cross =
+            |at: &str| self.crossed_rows(crossed.get(at), &stacks.in_use, &around, &mut nth);
+        let mut lead = Some(String::new());
+        let mut shown = Vec::with_capacity(views.len());
+        for view in views {
+            let after = view.mod_index.map(|i| key(&mods[i].id));
+            if let Some(lead) = lead.take_if(|_| after.is_some()) {
+                shown.extend(cross(&lead));
+            }
+            shown.push(view);
+            if let Some(after) = after {
+                shown.extend(cross(&after));
+            }
+        }
+        shown
+    }
+
+    /// Mods a list under the one in use gives that the load order lacks: crossed out, not in it.
+    fn crossed_rows(
+        &self,
+        crossed: Option<&Vec<(&str, &str)>>,
+        in_use: &str,
+        around: &Around,
+        nth: &mut impl FnMut(RowKey) -> usize,
+    ) -> Vec<RowView> {
+        let inactive = self.inactive.mods();
+        let row = |&(id, list): &(&str, &str)| {
+            let index = inactive.iter().position(|m| key(&m.id) == id)?;
+            let mut view = self.mod_row(Side::Inactive, index, &inactive[index], around, nth);
+            view.number = 0;
+            view.from = list.to_string();
+            view.crossed = say!(
+                "Comes from {}, deactivated in {}",
+                list.to_string(),
+                in_use.to_string()
+            );
+            Some(view)
+        };
+        crossed.into_iter().flatten().filter_map(row).collect()
     }
 
     fn mod_row(
@@ -388,6 +437,7 @@ impl LoadOrder {
                 Side::Active => m.from.clone(),
                 Side::Inactive => String::new(),
             },
+            crossed: Sentence::default(),
         }
     }
 }

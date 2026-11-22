@@ -185,12 +185,19 @@ pub fn load(dir: &Path, name: &str) -> Result<Vec<String>, Error> {
     resolve(dir, name, &mut Vec::new()).map(|(ids, _)| ids)
 }
 
-/// The mods `name` gives from the lists under it, each with the lowest list in the stack that gives it.
+/// The mods the lists `name` builds on give, those it turns off too, each with the lowest list in
+/// the stack that gives it.
 pub fn underneath(dir: &Path, name: &str) -> Vec<(String, String)> {
-    sources(dir, name)
-        .into_iter()
-        .filter(|(_, list)| list != name)
-        .collect()
+    let bases = read(&file_for(dir, name))
+        .map(|k| k.bases)
+        .unwrap_or_default();
+    let mut found: Vec<(String, String)> = Vec::new();
+    for (id, list) in bases.iter().flat_map(|base| sources(dir, base)) {
+        if !found.iter().any(|(had, _)| *had == id) {
+            found.push((id, list));
+        }
+    }
+    found
 }
 
 /// Each mod `name` gives, with the lowest list in its stack that gives it.
@@ -487,7 +494,7 @@ mod tests {
                 .collect()
         };
         let mut under = from("base", &["core", "a", "x", "c"]);
-        under.extend(from("qol", &["d", "f"]));
+        under.extend(from("qol", &["d", "e", "f"]));
         assert_eq!(underneath(dir, "medieval"), under);
         save(dir, "base", &ids(&["core"])).unwrap();
         let medieval = all(dir).into_iter().find(|s| s.name == "medieval").unwrap();

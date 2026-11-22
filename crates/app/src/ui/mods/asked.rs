@@ -6,11 +6,9 @@ use rimstack_core::mods::library::ModId;
 impl Mods {
     pub fn show_mod(&mut self, mod_id: ModId, cx: &mut Context<Self>) {
         for side in [Side::Active, Side::Inactive] {
-            let at = self
-                .shown(side)
-                .rows
-                .iter()
-                .position(|row| row.mod_id == Some(mod_id) && !row.is_header);
+            let at = self.shown(side).rows.iter().position(|row| {
+                row.mod_id == Some(mod_id) && !row.is_header && row.crossed.is_empty()
+            });
             if let Some(at) = at {
                 if side == Side::Inactive && self.view.inactive_hidden {
                     self.set_hidden(false, cx);

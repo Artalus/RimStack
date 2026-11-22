@@ -342,12 +342,20 @@ impl Mods {
         self.keep_selection(inverted.ids, in_active, cx);
     }
 
+    /// Where row `row` of the list is shown: crossed-out rows sit between.
+    fn shown_at(&self, side: Side, row: usize) -> Option<usize> {
+        let rows = self.shown(side).rows.iter().enumerate();
+        rows.filter(|(_, r)| r.crossed.is_empty())
+            .nth(row)
+            .map(|(at, _)| at)
+    }
+
     pub(super) fn select_all(&mut self, side: Side, cx: &mut Context<Self>) {
         let ids = self
             .shown(side)
             .rows
             .iter()
-            .filter(|r| !r.is_header)
+            .filter(|r| !r.is_header && r.crossed.is_empty())
             .filter_map(|r| r.mod_id)
             .collect();
         self.keep_selection(ids, side == Side::Active, cx);
@@ -395,7 +403,7 @@ impl Mods {
         let rows = self.shown(side).rows.clone();
         if let Some(at) = rows
             .iter()
-            .position(|r| r.mod_id == Some(id) && !r.is_header)
+            .position(|r| r.mod_id == Some(id) && !r.is_header && r.crossed.is_empty())
         {
             self.list(side).update(cx, |list, cx| match centre {
                 true => list.reveal(at, cx),
@@ -429,7 +437,8 @@ impl Mods {
                     .filter(|_| self.list.read(cx).selected_active == (side == Side::Active));
                 let row = self.list.read(cx).order.list(side).step_from(current, by);
                 let id = row
-                    .and_then(|row| self.shown(side).rows.get(row))
+                    .and_then(|row| self.shown_at(side, row))
+                    .and_then(|at| self.shown(side).rows.get(at))
                     .and_then(|r| r.mod_id);
                 if let Some(id) = id {
                     self.select(Some(id), side == Side::Active, cx);
@@ -498,10 +507,12 @@ impl Mods {
         let Some(row) = found else {
             return;
         };
-        if let Some(id) = self.active.rows.get(row).map(|r| r.mod_id) {
+        let at = self.shown_at(Side::Active, row);
+        let id = at.and_then(|at| self.active.rows.get(at)).map(|r| r.mod_id);
+        if let (Some(at), Some(id)) = (at, id) {
             self.select(id, true, cx);
             self.list(Side::Active)
-                .update(cx, |list, cx| list.contain(row, cx));
+                .update(cx, |list, cx| list.contain(at, cx));
         }
     }
 

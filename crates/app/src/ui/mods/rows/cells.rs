@@ -192,9 +192,10 @@ pub(super) fn cells(theme: &Theme, row: &RowView, fitted: Fitted, shown: Shown<'
         fitted.name,
         true,
     );
-    let full_name = match fitted.cut && pointed {
-        true => put(&row.name),
-        false => String::new(),
+    let full_name = match (pointed, fitted.cut) {
+        (true, _) if !row.crossed.is_empty() => put(&row.crossed),
+        (true, true) => put(&row.name),
+        _ => String::new(),
     };
     let name = match columns {
         Some(columns) => div().flex_none().w(columns.name_cell),
@@ -383,7 +384,10 @@ pub(super) fn cells(theme: &Theme, row: &RowView, fitted: Fitted, shown: Shown<'
                         theme,
                         theme.small(),
                         if chosen { c.on_selected_dim } else { c.ink3 },
-                        row.number.to_string(),
+                        match row.crossed.is_empty() {
+                            true => row.number.to_string(),
+                            false => String::new(),
+                        },
                     )),
             )
         })

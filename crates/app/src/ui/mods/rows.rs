@@ -138,6 +138,11 @@ fn hover_buttons(
     mods: &WeakEntity<Mods>,
 ) -> AnyElement {
     let c = &theme.colours;
+    let acts = if row.crossed.is_empty() {
+        side
+    } else {
+        Side::Inactive
+    };
     let size = theme.sized(24.);
     let (mod_id, index) = (row.mod_id, row.mod_index);
     let tall = height(theme, row, side == Side::Active);
@@ -170,7 +175,7 @@ fn hover_buttons(
         .flex()
         .items_center()
         .gap(theme::GAP_HAIR)
-        .when(pointed, |d| {
+        .when(pointed && row.crossed.is_empty(), |d| {
             d.child(
                 button(
                     "row-across",
@@ -183,7 +188,7 @@ fn hover_buttons(
                 .on_click(move |_, _, cx| {
                     cx.stop_propagation();
                     if let Some(id) = mod_id {
-                        let _ = across.update(cx, |mods, cx| mods.toggle_mod(side, id, cx));
+                        let _ = across.update(cx, |mods, cx| mods.toggle_mod(acts, id, cx));
                     }
                 }),
             )
@@ -210,7 +215,7 @@ fn hover_buttons(
                     let button = placed.get();
                     let at = gpui::point(button.left(), button.center().y + tall / 2.);
                     let _ = menu.update(cx, |mods, cx| {
-                        mods.row_menu(side, index, mod_id, at, window, cx)
+                        mods.row_menu(acts, index, mod_id, at, window, cx)
                     });
                 }),
         )
@@ -277,6 +282,12 @@ pub fn row(
     cx: &mut gpui::App,
 ) -> AnyElement {
     let c = &theme.colours;
+    let acts = if row.crossed.is_empty() {
+        side
+    } else {
+        Side::Inactive
+    };
+    let crossed_out = !row.crossed.is_empty();
     let colour = category_colour(theme, row.category);
     let big_header = row.is_header && !row.is_sub && !row.again;
     let mark = row
@@ -398,6 +409,18 @@ pub fn row(
             )
         })
         .child(body)
+        .when(crossed_out, |d| {
+            d.child(
+                div()
+                    .absolute()
+                    .left(theme::GAP + theme::GAP_LARGE)
+                    // clear of the row's three hover buttons
+                    .right(theme::GAP_CARD + theme.sized(24.) * 3. + theme::GAP_WIDE)
+                    .top(gpui::relative(0.5))
+                    .h(px(1.5))
+                    .bg(c.ink),
+            )
+        })
         .when(
             !is_header
                 && row.mod_index.is_some()
@@ -406,9 +429,8 @@ pub fn row(
                 && !cx.has_active_drag(),
             |d| d.child(hover_buttons(theme, side, at, row, pointed, &mods)),
         )
-        .when(!is_header, |d| {
+        .when_some(row.mod_index.filter(|_| !crossed_out), |d, index| {
             let landing = mods.clone();
-            let index = row.mod_index.unwrap_or(0);
             d.child(
                 div()
                     .absolute()
@@ -438,7 +460,8 @@ pub fn row(
             })
         })
         .when_some(
-            row.mod_index.filter(|_| around.movable && !is_header),
+            row.mod_index
+                .filter(|_| around.movable && !is_header && !crossed_out),
             |d, mod_index| {
                 let ids = match chosen && around.chosen_ids.len() > 1 {
                     true => around.chosen_ids.to_vec(),
@@ -464,15 +487,15 @@ pub fn row(
         .on_click(move |event, _, cx| {
             let (modifiers, command) = (event.modifiers(), event.modifiers().secondary(cx));
             let twice = event.click_count() >= 2 && !previewing;
-            let active = side == Side::Active;
+            let active = acts == Side::Active;
             let _ = mods.update(cx, |mods, cx| match (is_header, is_sub) {
                 (true, true) => mods.toggle_sub(side, at, cx),
                 (true, false) => mods.toggle_category(side, category, cx),
                 (false, _) => match mod_id {
-                    Some(id) if twice => mods.toggle_mod(side, id, cx),
+                    Some(id) if twice => mods.toggle_mod(acts, id, cx),
                     Some(id) if command => mods.select_also(id, active, cx),
                     Some(id) if modifiers.shift => mods.select_through(id, active, cx),
-                    Some(id) => mods.choose(side, id, cx),
+                    Some(id) => mods.choose(acts, id, cx),
                     None if twice || command => {}
                     None => mods.select(None, active, cx),
                 },
@@ -485,7 +508,7 @@ pub fn row(
                 let _ = menu.update(cx, |mods, cx| match (is_header, is_sub) {
                     (true, true) => mods.sub_menu(side, at_row, at, window, cx),
                     (true, false) => mods.category_menu(category, at, window, cx),
-                    (false, _) => mods.row_menu(side, mod_index, mod_id, at, window, cx),
+                    (false, _) => mods.row_menu(acts, mod_index, mod_id, at, window, cx),
                 });
             }
         })

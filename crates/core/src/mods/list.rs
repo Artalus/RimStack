@@ -506,6 +506,10 @@ impl GroupedList {
         self.rebuild();
     }
 
+    pub fn filtered(&self) -> bool {
+        !self.filter.is_empty()
+    }
+
     pub fn set_filter_on(&mut self, side: Side, text: &str) {
         self.filter = Filter::parse(text);
         self.side = Some(side);

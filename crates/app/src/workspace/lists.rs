@@ -5,12 +5,13 @@ use rimstack_core::base::locks::Held;
 use rimstack_core::base::sentence::Sentence;
 use rimstack_core::kept::{journal, lists};
 use rimstack_core::mods::library::ModId;
+use rimstack_core::mods::list::Mod;
 use rimstack_core::mods::share;
 use rimstack_core::rimworld::modsconfig;
 use rimstack_core::say;
 use rimstack_core::sources::rentry;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 const CORE: &str = "ludeon.rimworld";
@@ -18,7 +19,11 @@ const CORE: &str = "ludeon.rimworld";
 /// What the saved lists say about the load order; kept off the window's thread.
 #[derive(Default, PartialEq)]
 pub struct Stacks {
-    /// The list under the one in use that a mod comes from.
+    pub in_use: String,
+    /// Folded ids: the list in use's mods in its order, with those the lists under it give merged in;
+    /// where a crossed-out mod stays.
+    order: Vec<String>,
+    /// The list under the one in use that a mod comes from, by folded id.
     underneath: HashMap<String, String>,
     /// The lists built on the one in use.
     pub used_by: Vec<String>,
@@ -34,10 +39,28 @@ impl Stacks {
     pub fn holding(&self, id: &str) -> &[String] {
         self.holding.get(&key(id)).map_or(&[], Vec::as_slice)
     }
+
+    /// The mods of `underneath` the load order lacks, each with its list, by the folded id of the
+    /// active mod each follows in `order`; "" before the first.
+    pub fn crossed(&self, active: &[Mod]) -> HashMap<&str, Vec<(&str, &str)>> {
+        let on: HashSet<String> = active.iter().map(|m| key(&m.id)).collect();
+        let (mut crossed, mut after) = (HashMap::new(), "");
+        for id in &self.order {
+            if on.contains(id) {
+                after = id;
+            } else if let Some(list) = self.underneath.get(id) {
+                crossed
+                    .entry(after)
+                    .or_insert_with(Vec::new)
+                    .push((id.as_str(), list.as_str()));
+            }
+        }
+        crossed
+    }
 }
 
 /// A list may hold a Workshop copy as `x_steam`, which the game writes while a local `x` is installed too.
-fn key(id: &str) -> String {
+pub fn key(id: &str) -> String {
     rimstack_core::rimworld::id::split_steam(id).0
 }
 
@@ -271,11 +294,19 @@ impl App {
                     .push(l.name.to_lowercase());
             }
         }
+        let below = lists::underneath(&dir, name);
+        let in_use = saved.iter().filter(|l| l.name == name);
+        let mut order: Vec<String> = in_use
+            .flat_map(|l| l.mods.iter().map(|id| key(id)))
+            .collect();
+        lists::merge(
+            &mut order,
+            &below.iter().map(|(id, _)| key(id)).collect::<Vec<_>>(),
+        );
         let found = Stacks {
-            underneath: lists::underneath(&dir, name)
-                .into_iter()
-                .map(|(id, list)| (key(&id), list))
-                .collect(),
+            in_use: name.to_string(),
+            order,
+            underneath: below.into_iter().map(|(id, l)| (key(&id), l)).collect(),
             holding,
             used_by: saved
                 .into_iter()

@@ -95,6 +95,7 @@
  "Another list taken: {} mod": "Взят другой список: {} мод",
  "Another list taken: {} mods": "Взят другой список: {} мода|Взят другой список: {} модов",
  "Appearance": "Внешний вид",
+ "Comes from {}, deactivated in {}": "Взят из {}, отключён в {}",
  "Delete": "Удалить",
  "Delete {}?": "Удалить {}?",
  "Deploy": "Развернуть",

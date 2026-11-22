@@ -94,6 +94,7 @@
  "Another list taken: {} mod": "Pobrano inną listę: {} mod",
  "Another list taken: {} mods": "Pobrano inną listę: {} mody|Pobrano inną listę: {} modów",
  "Appearance": "Wygląd",
+ "Comes from {}, deactivated in {}": "Pochodzi z {}, wyłączony w {}",
  "Delete": "Usuń",
  "Delete {}?": "Usunąć {}?",
  "Deploy": "Wdróż",

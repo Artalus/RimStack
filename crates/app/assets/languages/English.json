@@ -185,6 +185,7 @@
  "Colony": "Colony",
  "Colours": "Colours",
  "Columns": "Columns",
+ "Comes from {}, deactivated in {}": "Comes from {}, deactivated in {}",
  "Comfortable": "Comfortable",
  "Comfortable rows": "Comfortable rows",
  "Community data": "Community data",

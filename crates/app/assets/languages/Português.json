@@ -94,6 +94,7 @@
  "Another list taken: {} mod": "Outra lista em uso: {} mod",
  "Another list taken: {} mods": "Outra lista em uso: {} mods",
  "Appearance": "Aparência",
+ "Comes from {}, deactivated in {}": "Vem de {}, desativado em {}",
  "Delete": "Excluir",
  "Delete {}?": "Excluir {}?",
  "Deploy": "Implantar",

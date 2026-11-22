@@ -92,6 +92,7 @@
  "Another list taken: {} mod": "다른 목록을 가져왔습니다: 모드 {}개",
  "Another list taken: {} mods": "다른 목록을 가져왔습니다: 모드 {}개",
  "Appearance": "외관",
+ "Comes from {}, deactivated in {}": "{}에서 옴, {}에서 비활성화됨",
  "Delete": "삭제",
  "Delete {}?": "{}을(를) 삭제할까요?",
  "Deploy": "배포",

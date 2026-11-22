@@ -611,7 +611,7 @@ impl Mods {
             .active
             .rows
             .iter()
-            .filter(|r| !r.is_header)
+            .filter(|r| !r.is_header && r.crossed.is_empty())
             .filter_map(|r| r.mod_id)
             .collect();
         for id in ids {

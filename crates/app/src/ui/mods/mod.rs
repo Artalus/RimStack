@@ -705,7 +705,7 @@ impl Mods {
         };
         let Some(id) = rows
             .iter()
-            .filter(|r| !r.is_header)
+            .filter(|r| !r.is_header && r.crossed.is_empty())
             .nth(nth)
             .and_then(|r| r.mod_id)
         else {
