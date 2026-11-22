@@ -48,6 +48,8 @@ pub struct Prompt {
     turn: usize,
     /// Answered or cancelled, drawn only while it fades out; its answer is gone.
     fading: Option<Question>,
+    /// A second answer, beside the asked one.
+    other: Option<(String, Answer)>,
 }
 
 struct Asking(Entity<Prompt>);
@@ -61,9 +63,18 @@ pub fn install(cx: &mut App) -> Entity<Prompt> {
         before: None,
         turn: 0,
         fading: None,
+        other: None,
     });
     cx.set_global(Asking(prompt.clone()));
     prompt
+}
+
+/// As `ask`, with `other` a second answer.
+pub fn ask_or(question: Question, other: (String, Answer), window: &mut Window, cx: &mut App) {
+    ask(question, window, cx);
+    if let Some(asking) = cx.try_global::<Asking>().map(|asking| asking.0.clone()) {
+        asking.update(cx, |prompt, _| prompt.other = Some(other));
+    }
 }
 
 pub fn ask(question: Question, window: &mut Window, cx: &mut App) {
@@ -77,6 +88,7 @@ pub fn ask(question: Question, window: &mut Window, cx: &mut App) {
         prompt.before = before;
         prompt.turn = super::motion::opening();
         prompt.fading = None;
+        prompt.other = None;
         match field {
             Some(field) => {
                 cx.subscribe_in(
@@ -98,6 +110,7 @@ pub fn ask(question: Question, window: &mut Window, cx: &mut App) {
 
 impl Prompt {
     fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Option<Answer> {
+        self.other = None;
         let run = self.asked.take().map(|mut asked| {
             let run = std::mem::replace(&mut asked.run, Box::new(|_, _| {}));
             if super::motion::fades_out(cx) {
@@ -180,6 +193,17 @@ impl Render for Prompt {
                 prompt.close(window, cx);
             },
         ));
+        let other = self.other.as_ref().map(|(label, _)| {
+            Btn::new("prompt-other", label.clone()).on_click(cx.listener(
+                |prompt, _, window, cx| {
+                    let other = prompt.other.take();
+                    prompt.close(window, cx);
+                    if let Some((_, run)) = other {
+                        run(window, cx);
+                    }
+                },
+            ))
+        });
         let sheet = div()
             .id("prompt-sheet")
             .flex()
@@ -217,6 +241,7 @@ impl Render for Prompt {
                     .justify_end()
                     .gap(theme::GAP)
                     .child(cancel)
+                    .children(other)
                     .child(answer),
             );
         let dimmed = div()

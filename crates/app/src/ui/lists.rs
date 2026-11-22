@@ -252,13 +252,19 @@ impl Lists {
         );
     }
 
-    fn build_on(&mut self, name: &str, bases: &[String], cx: &mut Context<Self>) {
+    fn build_on(
+        &mut self,
+        name: &str,
+        bases: &[String],
+        without: &[String],
+        cx: &mut Context<Self>,
+    ) {
         let (app, in_use) = (super::app(cx), self.list_name(cx) == name);
-        let (name, bases) = (name.to_string(), bases.to_vec());
+        let (name, bases, without) = (name.to_string(), bases.to_vec(), without.to_vec());
         crate::jobs::run(
             "list built on",
             cx,
-            move || app.build_list_on(&name, &bases, in_use),
+            move || app.build_list_on(&name, &bases, &without, in_use),
             |lists, built, cx| {
                 if let Ok(Some(ids)) = &built {
                     super::navigate::go(super::navigate::Go::TakeList(ids.clone()), cx);
@@ -267,6 +273,51 @@ impl Lists {
                 cx.notify();
             },
         );
+    }
+
+    /// Building on fewer lists asks whether the mods only those gave stay.
+    fn unstack(
+        &mut self,
+        name: &str,
+        other: &str,
+        bases: Vec<String>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let left = rimstack_core::kept::lists::left_behind(&self.saved, name, &bases);
+        if left.is_empty() {
+            return self.build_on(name, &bases, &[], cx);
+        }
+        let own = self.saved.iter().find(|s| s.name == name);
+        let own = own.map_or(0, |s| s.mods.len()) - left.len();
+        let me = cx.entity().downgrade();
+        let answer = |without: Vec<String>| -> prompt::Answer {
+            let (me, name, bases) = (me.clone(), name.to_string(), bases.clone());
+            Box::new(move |_, cx| {
+                let _ = me.update(cx, |lists, cx| lists.build_on(&name, &bases, &without, cx));
+            })
+        };
+        let mods = |n: usize| say_n!(n, "{} mod", "{} mods");
+        let asked = say!(
+            "Keep {} from {} in {}, or shrink it down to its own {}?",
+            mods(left.len()).inside(),
+            other,
+            name,
+            mods(own).inside()
+        );
+        let question = Question {
+            title: put(&say!("Stop building on {}", other)),
+            lines: vec![Line::Text(put(&asked))],
+            label: put(&say!("Keep")),
+            danger: false,
+            run: answer(Vec::new()),
+        };
+        let shrink = (put(&say!("Shrink")), answer(left));
+        // The menu's ticks would no longer match the list if the question is cancelled.
+        window.defer(cx, move |window, cx| {
+            menu::close(window, cx);
+            prompt::ask_or(question, shrink, window, cx);
+        });
     }
 
     fn keep_typed(&mut self, cx: &mut Context<Self>) {
@@ -522,7 +573,7 @@ impl Lists {
                         theme,
                         theme.small(),
                         c.ink3,
-                        put(&say_n!(saved.mods, "{} mod", "{} mods")),
+                        put(&say_n!(saved.mods.len(), "{} mod", "{} mods")),
                     ))
                     .child(
                         Btn::new(("bases-list", at), label_under)
@@ -713,7 +764,7 @@ impl Lists {
                 .map(|other| {
                     let (me, name, other_name, shared) =
                         (me.clone(), name.clone(), other.clone(), bases.clone());
-                    Entry::item(other.clone(), move |_, cx| {
+                    Entry::item(other.clone(), move |window, cx| {
                         let mut bases = shared.borrow_mut();
                         let had = bases.len();
                         bases.retain(|u| *u != other_name);
@@ -722,7 +773,9 @@ impl Lists {
                         }
                         let next = bases.clone();
                         drop(bases);
-                        let _ = me.update(cx, |lists, cx| lists.build_on(&name, &next, cx));
+                        let _ = me.update(cx, |lists, cx| {
+                            lists.unstack(&name, &other_name, next, window, cx)
+                        });
                     })
                     .ticks(bases.borrow().contains(other))
                     .into()

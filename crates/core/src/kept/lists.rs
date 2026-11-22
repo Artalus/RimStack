@@ -9,7 +9,7 @@ use std::time::UNIX_EPOCH;
 pub struct Saved {
     pub name: String,
     /// With what the lists it builds on give now.
-    pub mods: usize,
+    pub mods: Vec<String>,
     pub bases: Vec<String>,
     /// Every list under it, the nearest first.
     pub under: Vec<String>,
@@ -68,15 +68,32 @@ pub fn save(dir: &Path, name: &str, ids: &[String]) -> Result<(), Error> {
     write(dir, name, ids, bases)
 }
 
-/// A list built on brings in its mods, but for those `name` turned off.
-pub fn build_on(dir: &Path, name: &str, bases: &[String]) -> Result<(), Error> {
-    let mut ids = load(dir, name)?;
+/// A list built on brings in its mods, but for those `name` turned off; `without` are taken out.
+pub fn build_on(dir: &Path, name: &str, bases: &[String], without: &[String]) -> Result<(), Error> {
+    let mut ids = minus(&load(dir, name)?, without);
     let drops = read(&file_for(dir, name))
         .map(|k| k.drops)
         .unwrap_or_default();
     let (given, _) = given(dir, name, bases, &mut Vec::new())?;
     merge(&mut ids, &minus(&given, &drops));
     write(dir, name, &ids, bases.to_vec())
+}
+
+/// The mods of `name` that only lists it would stop building on give it.
+pub fn left_behind(all: &[Saved], name: &str, bases: &[String]) -> Vec<String> {
+    let mods = |n: &String| all.iter().find(|s| s.name == *n).map(|s| &s.mods);
+    let given = |names: &[String]| -> Vec<String> {
+        names.iter().filter_map(mods).flatten().cloned().collect()
+    };
+    let Some(this) = all.iter().find(|s| s.name == name) else {
+        return Vec::new();
+    };
+    let gone = minus(&given(&this.bases), &given(bases));
+    this.mods
+        .iter()
+        .filter(|id| gone.contains(id))
+        .cloned()
+        .collect()
 }
 
 fn write(dir: &Path, name: &str, ids: &[String], mut bases: Vec<String>) -> Result<(), Error> {
@@ -116,7 +133,7 @@ pub fn all(dir: &Path) -> Vec<Saved> {
             let kept = read(&entry.path())?;
             let modified = entry.metadata().ok()?.modified().ok()?;
             Some(Saved {
-                mods: load(dir, &kept.name).map_or(kept.ids.len(), |ids| ids.len()),
+                mods: load(dir, &kept.name).unwrap_or_else(|_| kept.ids.clone()),
                 under: under(dir, &kept.name),
                 name: kept.name,
                 bases: kept.bases,
@@ -304,7 +321,7 @@ mod tests {
         let found = all(&dir);
         let names: Vec<&str> = found.iter().map(|s| s.name.as_str()).collect();
         assert_eq!(names, ["base", "Medieval run"]);
-        assert_eq!(found[1].mods, 2);
+        assert_eq!(found[1].mods.len(), 2);
         assert_eq!(load(&dir, "Medieval run").unwrap(), ids(&["a", "b"]));
         delete(&dir, "base").unwrap();
         assert_eq!(all(&dir).len(), 1);
@@ -364,7 +381,7 @@ mod tests {
     /// As the UI does it: save, build on others, save again.
     fn stacked(dir: &Path, name: &str, bases: &[&str], saved: &[&str]) {
         save(dir, name, &ids(&["core"])).unwrap();
-        build_on(dir, name, &ids(bases)).unwrap();
+        build_on(dir, name, &ids(bases), &[]).unwrap();
         save(dir, name, &ids(saved)).unwrap();
     }
 
@@ -392,7 +409,7 @@ mod tests {
         let dir = tmp.path();
         mods(dir);
         save(dir, "raiders", &ids(&["core"])).unwrap();
-        build_on(dir, "raiders", &ids(&["modern", "medieval"])).unwrap();
+        build_on(dir, "raiders", &ids(&["modern", "medieval"]), &[]).unwrap();
         let all = ["core", "a", "b", "c", "d", "g", "h", "i", "f", "z"];
         assert_eq!(load(dir, "raiders").unwrap(), ids(&all));
         let raiders = super::all(dir).into_iter().find(|s| s.name == "raiders");
@@ -401,6 +418,20 @@ mod tests {
         let without_z = &all[..9];
         save(dir, "raiders", &ids(without_z)).unwrap();
         assert_eq!(load(dir, "raiders").unwrap(), ids(without_z));
+    }
+
+    #[test]
+    fn a_list_no_longer_built_on_another_may_leave_its_mods_behind() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        mods(dir);
+        save(dir, "raiders", &ids(&["core"])).unwrap();
+        build_on(dir, "raiders", &ids(&["modern", "medieval"]), &[]).unwrap();
+        let modern = ids(&["modern"]);
+        let left = left_behind(&all(dir), "raiders", &modern);
+        assert_eq!(left, ids(&["g", "h", "i"]));
+        build_on(dir, "raiders", &modern, &left).unwrap();
+        assert_eq!(load(dir, "raiders").unwrap(), load(dir, "modern").unwrap());
     }
 
     #[test]
@@ -435,7 +466,10 @@ mod tests {
         assert_eq!(underneath(dir, "medieval"), under);
         save(dir, "base", &ids(&["core"])).unwrap();
         let medieval = all(dir).into_iter().find(|s| s.name == "medieval").unwrap();
-        assert_eq!((medieval.mods, medieval.adds, medieval.drops), (6, 3, 1));
+        assert_eq!(
+            (medieval.mods.len(), medieval.adds, medieval.drops),
+            (6, 3, 1)
+        );
     }
 
     #[test]
@@ -468,9 +502,9 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path();
         mods(dir);
-        assert!(build_on(dir, "base", &ids(&["qol"])).is_err());
+        assert!(build_on(dir, "base", &ids(&["qol"]), &[]).is_err());
         assert_eq!(load(dir, "base").unwrap(), ids(&["core", "a", "b", "c"]));
-        assert!(build_on(dir, "base", &ids(&["base"])).is_err());
+        assert!(build_on(dir, "base", &ids(&["base"]), &[]).is_err());
     }
 
     #[test]
@@ -481,7 +515,7 @@ mod tests {
         let modern = load(dir, "modern").unwrap();
         std::fs::remove_file(file_for(dir, "qol")).unwrap();
         assert_eq!(load(dir, "modern").unwrap(), modern);
-        build_on(dir, "modern", &ids(&["qol", "base"])).unwrap();
+        build_on(dir, "modern", &ids(&["qol", "base"]), &[]).unwrap();
         assert_eq!(load(dir, "modern").unwrap(), modern);
         let saved = super::all(dir).into_iter().find(|s| s.name == "modern");
         assert_eq!(saved.unwrap().bases, ids(&["base"]));

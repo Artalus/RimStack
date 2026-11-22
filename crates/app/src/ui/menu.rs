@@ -196,6 +196,13 @@ fn show(
     });
 }
 
+/// Not from one of its entries, which run inside it: defer it.
+pub fn close(window: &mut Window, cx: &mut App) {
+    if let Some(menu) = cx.try_global::<Shown>().map(|shown| shown.0.clone()) {
+        menu.update(cx, |menu, cx| menu.close(window, cx));
+    }
+}
+
 impl Menu {
     fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         match super::motion::fades_out(cx) {

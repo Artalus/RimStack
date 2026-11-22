@@ -243,15 +243,17 @@ impl App {
         &self,
         name: &str,
         bases: &[String],
+        without: &[String],
         in_use: bool,
     ) -> Result<Option<Vec<String>>, Error> {
-        lists::build_on(&self.lists_dir(), name, bases)?;
+        lists::build_on(&self.lists_dir(), name, bases, without)?;
         self.publish(Changes::LISTS);
         if !in_use {
             return Ok(None);
         }
         let current = self.session().current().to_vec();
-        let mut ids = current.clone();
+        let mut ids: Vec<String> = current.clone();
+        ids.retain(|id| !without.contains(id));
         lists::merge(&mut ids, &lists::load(&self.lists_dir(), name)?);
         Ok((ids != current).then_some(ids))
     }
@@ -262,9 +264,9 @@ impl App {
         let mut holding: HashMap<String, Vec<String>> = HashMap::new();
         let saved = lists::all(&dir);
         for l in &saved {
-            for id in lists::load(&dir, &l.name).unwrap_or_default() {
+            for id in &l.mods {
                 holding
-                    .entry(key(&id))
+                    .entry(key(id))
                     .or_default()
                     .push(l.name.to_lowercase());
             }
@@ -382,7 +384,7 @@ mod tests {
         let (_tmp, app) = installed();
         app.keep_list("Mine", Some(vec!["a.b".into()])).unwrap();
         assert!(app.keep_list(" ", None).is_err());
-        assert_eq!(app.saved_lists()[0].mods, 1);
+        assert_eq!(app.saved_lists()[0].mods.len(), 1);
         assert_eq!(app.list_named("Mine").unwrap(), ["a.b"]);
         app.delete_list("Mine");
         assert!(app.list_named("Mine").is_err());
